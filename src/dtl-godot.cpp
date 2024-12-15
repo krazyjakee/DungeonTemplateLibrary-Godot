@@ -2,7 +2,6 @@
 #include <DTL.hpp>
 #include <godot_cpp/classes/ref.hpp>
 #include <godot_cpp/core/class_db.hpp>
-#include <DTL/Shape/CellularAutomatonMixIsland.hpp>
 
 using namespace godot;
 
@@ -18,7 +17,25 @@ DTL::~DTL()
 
 void DTL::_bind_methods()
 {
-    ClassDB::bind_method(D_METHOD("CellularAutomatonMixIsland", "width", "height", "iterations", "land_values"), &DTL::CellularAutomatonMixIsland, DEFVAL(5), DEFVAL(5), DEFVAL(5));
+    ClassDB::bind_method(D_METHOD("CellularAutomatonMixIsland", "width", "height", "iterations", "land_values"), &DTL::CellularAutomatonMixIsland, DEFVAL(5), DEFVAL(5));
+    ClassDB::bind_method(D_METHOD("CellularAutomatonIsland", "width", "height", "iterations", "probability"), &DTL::CellularAutomatonIsland, DEFVAL(5), DEFVAL(0.4));
+}
+
+Array MatrixToGodotArray(const std::vector<std::vector<uint8_t>> &matrix)
+{
+    Array result;
+    result.resize(matrix.size());
+    for (int y = 0; y < matrix.size(); ++y)
+    {
+        Array row;
+        row.resize(matrix[y].size());
+        for (int x = 0; x < matrix[y].size(); ++x)
+        {
+            row[x] = (int)matrix[y][x];
+        }
+        result[y] = row;
+    }
+    return result;
 }
 
 Array DTL::CellularAutomatonMixIsland(int width, int height, int iterations, int land_values)
@@ -89,18 +106,12 @@ Array DTL::CellularAutomatonMixIsland(int width, int height, int iterations, int
         break;
     }
 
-    // Convert the resulting matrix into a Godot Array
-    Array result;
-    result.resize(height);
-    for (int y = 0; y < height; ++y)
-    {
-        Array row;
-        row.resize(width);
-        for (int x = 0; x < width; ++x)
-        {
-            row[x] = (int)matrix[y][x];
-        }
-        result[y] = row;
-    }
-    return result;
+    return MatrixToGodotArray(matrix);
+}
+
+Array DTL::CellularAutomatonIsland(int width, int height, int iterations, float probability)
+{
+    std::vector<std::vector<uint8_t>> matrix(height, std::vector<uint8_t>(width, 0));
+    dtl::shape::CellularAutomatonIsland(1, 0, iterations, probability).draw(matrix);
+    return MatrixToGodotArray(matrix);
 }

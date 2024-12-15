@@ -16,5 +16,6 @@ namespace godot
     ~DTL();
 
     Array CellularAutomatonMixIsland(int width, int height, int iterations = 5, int land_values = 5);
+    Array CellularAutomatonIsland(int width, int height, int iterations = 5, float probability = 0.4);
   };
 }
