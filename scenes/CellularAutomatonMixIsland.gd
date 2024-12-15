@@ -21,5 +21,5 @@ func draw_island():
 	var dtl := DTL.new()
 	var matrix := dtl.CellularAutomatonMixIsland(map_size, map_size, iterations, land_values)
 	for child in get_children():
-		if child.has_method("draw_matrix"):
+		if child is DrawMatrix2D:
 			child.draw_matrix(matrix)

@@ -1,4 +1,5 @@
-extends Node2D
+@tool
+class_name DrawMatrix2D extends Node2D
 
 var default_colors: Array[Color] = [
 	Color.DARK_BLUE,

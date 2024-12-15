@@ -1,8 +1,12 @@
-[gd_scene load_steps=2 format=3 uid="uid://du45fhpt0ax5g"]
+[gd_scene load_steps=3 format=3 uid="uid://du45fhpt0ax5g"]
 
 [ext_resource type="Script" path="res://scenes/CellularAutomatonMixIsland.gd" id="1_kn80y"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_v6j60"]
 
 [node name="CellularAutomatonMixIsland" type="Node2D"]
 script = ExtResource("1_kn80y")
 map_size = 500
 iterations = 500
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_v6j60")
