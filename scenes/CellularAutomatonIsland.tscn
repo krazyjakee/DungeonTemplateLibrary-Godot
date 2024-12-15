@@ -1,6 +1,11 @@
-[gd_scene load_steps=2 format=3 uid="uid://cj6usqr25xd31"]
+[gd_scene load_steps=3 format=3 uid="uid://cj6usqr25xd31"]
 
 [ext_resource type="Script" path="res://scenes/CellularAutomatonIsland.gd" id="1_53ncq"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_oay3d"]
 
 [node name="CellularAutomatonIsland" type="Node2D"]
 script = ExtResource("1_53ncq")
+probability = 0.7
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_oay3d")
