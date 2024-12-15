@@ -1,7 +1,7 @@
 [submodule "include/DungeonTemplateLibrary"]
 	path = include/DungeonTemplateLibrary
 	url = https://github.com/AsPJT/DungeonTemplateLibrary.git
-[submodule "godot-cpp"]
-	path = godot-cpp
-	url = https://github.com/godotengine/godot-cpp
+[submodule "include/godot-cpp"]
+	path = include/godot-cpp
+	url = https://github.com/godotengine/godot-cpp.git
 	branch = 4.3
