@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://fvjn3exsdpvw"]
+
+[ext_resource type="Script" path="res://scenes/SimpleVoronoiIsland.gd" id="1_ak75c"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_5adfr"]
+
+[node name="SimpleVoronoiIsland" type="Node3D"]
+script = ExtResource("1_ak75c")
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_5adfr")

@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://de8dpjdv3rh1r"]
+
+[ext_resource type="Script" path="res://scenes/FractalLoopIsland.gd" id="1_80cjr"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_pb1p5"]
+
+[node name="FractalLoopIsland" type="Node3D"]
+script = ExtResource("1_80cjr")
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_pb1p5")

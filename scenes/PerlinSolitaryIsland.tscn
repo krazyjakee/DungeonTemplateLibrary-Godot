@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://boiqsaeb4riij"]
+
+[ext_resource type="Script" path="res://scenes/PerlinSolitaryIsland.gd" id="1_n1emm"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_vo5bb"]
+
+[node name="PerlinSolitaryIsland" type="Node3D"]
+script = ExtResource("1_n1emm")
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_vo5bb")

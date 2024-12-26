@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://c04chv34v52i1"]
+
+[ext_resource type="Script" path="res://scenes/FractalIsland.gd" id="1_llfvs"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_wl32a"]
+
+[node name="FractalIsland" type="Node3D"]
+script = ExtResource("1_llfvs")
+altitude = 95
+add_altitude = 20
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_wl32a")
