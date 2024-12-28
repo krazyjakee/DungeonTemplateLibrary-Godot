@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://cls2vxqcraj8i"]
+[gd_scene load_steps=4 format=3 uid="uid://cls2vxqcraj8i"]
 
 [ext_resource type="Script" path="res://scenes/DiamondSquareAverageIsland.gd" id="1_hjy4y"]
 [ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_3pt6a"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix3D.gd" id="3_2wqw4"]
 
 [node name="DiamondSquareAverageIsland" type="Node3D"]
 script = ExtResource("1_hjy4y")
@@ -10,3 +11,11 @@ altitude = 215
 
 [node name="DrawMatrix2D" type="Node2D" parent="."]
 script = ExtResource("2_3pt6a")
+
+[node name="DrawMatrix3D" type="Node3D" parent="."]
+script = ExtResource("3_2wqw4")
+amplitude = 46.3
+sea_level = 23.855
+grass_level = 10.125
+cliff_level = 10.085
+snow_level = 15.77

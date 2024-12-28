@@ -23,3 +23,5 @@ func draw_island():
 	for child in get_children():
 		if child is DrawMatrix2D:
 			child.draw_matrix(matrix)
+		if child is DrawMatrix3D:
+			child.draw_terrain(matrix)

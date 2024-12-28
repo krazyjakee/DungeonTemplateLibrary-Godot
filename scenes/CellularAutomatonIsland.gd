@@ -23,4 +23,6 @@ func draw_island():
 	var matrix := dtl.CellularAutomatonIsland(map_size, map_size, iterations, probability)
 	for child in get_children():
 		if child is DrawMatrix2D:
-			child.draw_matrix(matrix, colors)
+			child.draw_matrix(matrix)
+		if child is DrawMatrix3D:
+			child.draw_terrain(matrix)

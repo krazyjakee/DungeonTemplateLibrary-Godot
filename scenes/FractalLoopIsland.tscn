@@ -1,10 +1,20 @@
-[gd_scene load_steps=3 format=3 uid="uid://de8dpjdv3rh1r"]
+[gd_scene load_steps=4 format=3 uid="uid://de8dpjdv3rh1r"]
 
 [ext_resource type="Script" path="res://scenes/FractalLoopIsland.gd" id="1_80cjr"]
 [ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_pb1p5"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix3D.gd" id="3_q5fhs"]
 
 [node name="FractalLoopIsland" type="Node3D"]
 script = ExtResource("1_80cjr")
 
 [node name="DrawMatrix2D" type="Node2D" parent="."]
 script = ExtResource("2_pb1p5")
+
+[node name="DrawMatrix3D" type="Node3D" parent="."]
+script = ExtResource("3_q5fhs")
+amplitude = 25.365
+sea_level = 15.83
+beach_level = 0.505
+grass_level = 9.505
+cliff_level = 3.18
+snow_level = 4.72

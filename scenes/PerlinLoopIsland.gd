@@ -29,5 +29,7 @@ func draw_island():
 	var dtl := DTL.new()
 	var matrix := dtl.PerlinLoopIsland(map_size, map_size, frequency, octaves, max_height, min_height)
 	for child in get_children():
-		if child is DrawMatrix2D or child is DrawMatrix3D:
+		if child is DrawMatrix2D:
 			child.draw_heightmap(matrix)
+		if child is DrawMatrix3D:
+			child.draw_terrain(matrix)

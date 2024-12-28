@@ -37,5 +37,7 @@ func draw_island():
 	var dtl := DTL.new()
 	var matrix := dtl.PerlinSolitaryIsland(map_size, map_size, truncated_proportion, mountain_proportion, frequency, octaves, max_height, min_height)
 	for child in get_children():
-		if child is DrawMatrix2D or child is DrawMatrix3D:
+		if child is DrawMatrix2D:
 			child.draw_heightmap(matrix)
+		if child is DrawMatrix3D:
+			child.draw_terrain(matrix)

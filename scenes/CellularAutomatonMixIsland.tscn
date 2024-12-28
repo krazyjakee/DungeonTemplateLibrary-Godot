@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://du45fhpt0ax5g"]
+[gd_scene load_steps=4 format=3 uid="uid://du45fhpt0ax5g"]
 
 [ext_resource type="Script" path="res://scenes/CellularAutomatonMixIsland.gd" id="1_kn80y"]
 [ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_v6j60"]
+[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix3D.gd" id="3_3p566"]
 
 [node name="CellularAutomatonMixIsland" type="Node2D"]
 script = ExtResource("1_kn80y")
@@ -10,3 +11,12 @@ iterations = 500
 
 [node name="DrawMatrix2D" type="Node2D" parent="."]
 script = ExtResource("2_v6j60")
+
+[node name="DrawMatrix3D" type="Node3D" parent="."]
+script = ExtResource("3_3p566")
+amplitude = 2.82
+sea_level = 0.0
+beach_level = 0.06
+grass_level = 0.155
+cliff_level = 1.12
+snow_level = 2.365
