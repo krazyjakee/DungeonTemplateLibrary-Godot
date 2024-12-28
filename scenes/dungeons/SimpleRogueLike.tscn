@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://cxtck4de1lbhn"]
+
+[ext_resource type="Script" path="res://scripts/dungeons/SimpleRogueLike.gd" id="1_pn7e3"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_j4cwy"]
+
+[node name="SimpleRogueLike" type="Node2D"]
+script = ExtResource("1_pn7e3")
+max_room_size = Vector2(8, 8)
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_j4cwy")

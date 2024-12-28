@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://c04chv34v52i1"]
 
-[ext_resource type="Script" path="res://scenes/FractalIsland.gd" id="1_llfvs"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_wl32a"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix3D.gd" id="3_o7bwd"]
+[ext_resource type="Script" path="res://scripts/terrain/FractalIsland.gd" id="1_llfvs"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_wl32a"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_o7bwd"]
 
 [node name="FractalIsland" type="Node3D"]
 script = ExtResource("1_llfvs")

@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://cls2vxqcraj8i"]
 
-[ext_resource type="Script" path="res://scenes/DiamondSquareAverageIsland.gd" id="1_hjy4y"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_3pt6a"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix3D.gd" id="3_2wqw4"]
+[ext_resource type="Script" path="res://scripts/terrain/DiamondSquareAverageIsland.gd" id="1_hjy4y"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_3pt6a"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_2wqw4"]
 
 [node name="DiamondSquareAverageIsland" type="Node3D"]
 script = ExtResource("1_hjy4y")

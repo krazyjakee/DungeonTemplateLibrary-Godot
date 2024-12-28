@@ -10,10 +10,7 @@ var default_colors: Array[Color] = [
 	Color.DARK_OLIVE_GREEN
 ]
 
-func draw_matrix(matrix: Array, colors: Array[Color] = default_colors):
-	for child in get_children():
-		child.queue_free()
-		
+func draw_matrix_texture(matrix: Array, colors: Array[Color] = default_colors):
 	var height: int = matrix.size()
 	var width: int = matrix[0].size()
 	
@@ -32,12 +29,23 @@ func draw_matrix(matrix: Array, colors: Array[Color] = default_colors):
 	
 	# Convert the Image to a texture
 	var texture := ImageTexture.create_from_image(image)
+	return texture
+
+func draw_matrix(matrix: Array, colors: Array[Color] = default_colors, texture_scale: float = 1.0):
+	for child in get_children():
+		child.queue_free()
+	
+	var height: int = matrix.size()
+	var width: int = matrix[0].size()
+	
+	var texture: ImageTexture = draw_matrix_texture(matrix, colors)
 	
 	# Create a Sprite2D to display the texture
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
+	sprite.scale = Vector2(texture_scale, texture_scale)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sprite.position = Vector2(width / 2, height / 2)
+	sprite.position = Vector2(width / 2, height / 2) * texture_scale
 	
 	# Add the sprite as a child of this node so it can be displayed
 	add_child(sprite)

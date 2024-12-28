@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://bra5vcyc3lktw"]
+
+[ext_resource type="Script" path="res://scripts/dungeons/ClusteringMaze.gd" id="1_3pyjj"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_4ew2q"]
+
+[node name="ClusteringMaze" type="Node2D"]
+script = ExtResource("1_3pyjj")
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_4ew2q")

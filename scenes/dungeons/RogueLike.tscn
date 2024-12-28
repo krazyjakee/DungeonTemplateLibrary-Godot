@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://c06o8relbo0i"]
+
+[ext_resource type="Script" path="res://scripts/dungeons/RogueLike.gd" id="1_wd4wq"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_ivi8r"]
+
+[node name="RogueLike" type="Node2D"]
+script = ExtResource("1_wd4wq")
+map_size = 100
+max_ways = 100
+max_room_size = Vector2(5, 5)
+max_way_size = Vector2(10, 10)
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_ivi8r")

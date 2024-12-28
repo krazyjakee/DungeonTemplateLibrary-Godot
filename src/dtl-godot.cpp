@@ -27,6 +27,11 @@ void DTL::_bind_methods()
     ClassDB::bind_method(D_METHOD("PerlinIsland", "width", "height", "frequency", "octaves", "max_height", "min_height"), &DTL::PerlinIsland, DEFVAL(10.0), DEFVAL(6), DEFVAL(200), DEFVAL(200));
     ClassDB::bind_method(D_METHOD("PerlinLoopIsland", "width", "height", "frequency", "octaves", "max_height", "min_height"), &DTL::PerlinLoopIsland, DEFVAL(10.0), DEFVAL(6), DEFVAL(200), DEFVAL(200));
     ClassDB::bind_method(D_METHOD("PerlinSolitaryIsland", "width", "height", "truncated_proportion_", "mountain_proportion_", "frequency", "octaves", "max_height", "min_height"), &DTL::PerlinSolitaryIsland, DEFVAL(0.5), DEFVAL(0.45), DEFVAL(6.0), DEFVAL(6), DEFVAL(200), DEFVAL(200));
+    ClassDB::bind_method(D_METHOD("RogueLike", "width", "height", "max_ways", "min_room_width", "max_room_width", "min_room_height", "max_room_height", "min_way_horizontal", "max_way_horizontal", "min_way_vertical", "max_way_vertical"), &DTL::RogueLike, DEFVAL(20), DEFVAL(3), DEFVAL(3), DEFVAL(4), DEFVAL(4), DEFVAL(3), DEFVAL(4), DEFVAL(3), DEFVAL(4));
+    ClassDB::bind_method(D_METHOD("SimpleRogueLike", "width", "height", "division_min", "division_max", "room_min_x", "room_max_x", "room_min_y", "room_max_y"), &DTL::SimpleRogueLike, DEFVAL(3), DEFVAL(4), DEFVAL(5), DEFVAL(6), DEFVAL(7), DEFVAL(8));
+    ClassDB::bind_method(D_METHOD("MazeDig", "width", "height"), &DTL::MazeDig);
+    ClassDB::bind_method(D_METHOD("MazeBar", "width", "height"), &DTL::MazeBar);
+    ClassDB::bind_method(D_METHOD("ClusteringMaze", "width", "height"), &DTL::ClusteringMaze);
 }
 
 Array MatrixToGodotArray(const std::vector<std::vector<uint_fast8_t>> &matrix)
@@ -177,5 +182,43 @@ Array DTL::PerlinSolitaryIsland(int width, int height, float truncated_proportio
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::PerlinSolitaryIsland<uint_fast8_t>(truncated_proportion_, mountain_proportion_, frequency, octaves, max_height, min_height).draw(matrix);
+    return MatrixToGodotArray(matrix);
+}
+
+Array DTL::RogueLike(int width, int height, int max_ways, int min_room_width, int max_room_width, int min_room_height, int max_room_height, int min_way_horizontal, int max_way_horizontal, int min_way_vertical, int max_way_vertical)
+{
+    std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
+    dtl::shape::RogueLike<uint_fast8_t>(0, 1, 2, 3, 4, max_ways,
+                                        dtl::base::MatrixRange(min_room_width, min_room_height, max_room_width, max_room_height),
+                                        dtl::base::MatrixRange(min_way_horizontal, min_way_vertical, max_way_horizontal, max_way_vertical))
+        .draw(matrix);
+    return MatrixToGodotArray(matrix);
+}
+
+Array DTL::SimpleRogueLike(int width, int height, int division_min, int division_max, int room_min_x, int room_max_x, int room_min_y, int room_max_y)
+{
+    std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
+    dtl::shape::SimpleRogueLike<uint_fast8_t>(1, 2, division_min, division_max, room_min_x, room_max_x, room_min_y, room_max_y).draw(matrix);
+    return MatrixToGodotArray(matrix);
+}
+
+Array DTL::MazeDig(int width, int height)
+{
+    std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
+    dtl::shape::MazeDig<uint_fast8_t>(1, 0).draw(matrix);
+    return MatrixToGodotArray(matrix);
+}
+
+Array DTL::MazeBar(int width, int height)
+{
+    std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
+    dtl::shape::MazeBar<uint_fast8_t>(1, 0).draw(matrix);
+    return MatrixToGodotArray(matrix);
+}
+
+Array DTL::ClusteringMaze(int width, int height)
+{
+    std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
+    dtl::shape::ClusteringMaze<uint_fast8_t>(1).draw(matrix);
     return MatrixToGodotArray(matrix);
 }

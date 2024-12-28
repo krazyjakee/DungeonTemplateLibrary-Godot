@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://boiqsaeb4riij"]
 
-[ext_resource type="Script" path="res://scenes/PerlinSolitaryIsland.gd" id="1_n1emm"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_vo5bb"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix3D.gd" id="3_xl3jo"]
+[ext_resource type="Script" path="res://scripts/terrain/PerlinSolitaryIsland.gd" id="1_n1emm"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_vo5bb"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_xl3jo"]
 [ext_resource type="Script" path="res://addons/freelookcamera/free_look_camera.gd" id="4_j3wu3"]
 
 [node name="PerlinSolitaryIsland" type="Node3D"]

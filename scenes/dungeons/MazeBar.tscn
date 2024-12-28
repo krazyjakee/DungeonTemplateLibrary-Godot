@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://bd34s07maxuys"]
+
+[ext_resource type="Script" path="res://scripts/dungeons/MazeBar.gd" id="1_1uf3n"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_y07cm"]
+
+[node name="MazeBar" type="Node2D"]
+script = ExtResource("1_1uf3n")
+
+[node name="DrawMatrix2D" type="Node2D" parent="."]
+script = ExtResource("2_y07cm")

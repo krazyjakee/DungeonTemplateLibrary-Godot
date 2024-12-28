@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://du45fhpt0ax5g"]
 
-[ext_resource type="Script" path="res://scenes/CellularAutomatonMixIsland.gd" id="1_kn80y"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_v6j60"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix3D.gd" id="3_3p566"]
+[ext_resource type="Script" path="res://scripts/terrain/CellularAutomatonMixIsland.gd" id="1_kn80y"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_v6j60"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_3p566"]
 
 [node name="CellularAutomatonMixIsland" type="Node2D"]
 script = ExtResource("1_kn80y")

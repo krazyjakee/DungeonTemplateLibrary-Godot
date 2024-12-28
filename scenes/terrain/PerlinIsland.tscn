@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://ddir8udf412iv"]
 
-[ext_resource type="Script" path="res://scenes/PerlinIsland.gd" id="1_eo5bj"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix2D.gd" id="2_f3c86"]
-[ext_resource type="Script" path="res://scenes/renderers/DrawMatrix3D.gd" id="3_u4oar"]
+[ext_resource type="Script" path="res://scripts/terrain/PerlinIsland.gd" id="1_eo5bj"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_f3c86"]
+[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_u4oar"]
 
 [node name="PerlinIsland" type="Node3D"]
 script = ExtResource("1_eo5bj")

@@ -25,5 +25,10 @@ namespace godot
     Array PerlinIsland(int width, int height, float frequency = 10.0, int octaves = 6, int max_height = 200, int min_height = 200);
     Array PerlinLoopIsland(int width, int height, float frequency = 10.0, int octaves = 6, int max_height = 200, int min_height = 200);
     Array PerlinSolitaryIsland(int width, int height, float truncated_proportion_ = 0.5, float mountain_proportion_ = 0.45, float frequency = 6.0, int octaves = 6, int max_height = 200, int min_height = 200);
+    Array RogueLike(int width, int height, int max_ways = 20, int min_room_width = 3, int max_room_width = 3, int min_room_height = 4, int max_room_height = 4, int min_way_horizontal = 3, int max_way_horizontal = 4, int min_way_vertical = 3, int max_way_vertical = 4);
+    Array SimpleRogueLike(int width, int height, int division_min = 3, int division_max = 4, int room_min_x = 5, int room_max_x = 6, int room_min_y = 7, int room_max_y = 8);
+    Array MazeDig(int width, int height);
+    Array MazeBar(int width, int height);
+    Array ClusteringMaze(int width, int height);
   };
 }
