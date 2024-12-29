@@ -30,5 +30,7 @@ namespace godot
     Array MazeDig(int width, int height);
     Array MazeBar(int width, int height);
     Array ClusteringMaze(int width, int height);
+    int _seed = 0;
+    void SetSeed(int seed = 0);
   };
 }

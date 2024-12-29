@@ -32,7 +32,10 @@ void DTL::_bind_methods()
     ClassDB::bind_method(D_METHOD("MazeDig", "width", "height"), &DTL::MazeDig);
     ClassDB::bind_method(D_METHOD("MazeBar", "width", "height"), &DTL::MazeBar);
     ClassDB::bind_method(D_METHOD("ClusteringMaze", "width", "height"), &DTL::ClusteringMaze);
+    ClassDB::bind_method(D_METHOD("SetSeed", "seed"), &DTL::SetSeed, DEFVAL(0));
 }
+
+int _seed = 0;
 
 Array MatrixToGodotArray(const std::vector<std::vector<uint_fast8_t>> &matrix)
 {
@@ -167,21 +170,21 @@ Array DTL::SimpleVoronoiIsland(int width, int height, float voronoi_num, float p
 Array DTL::PerlinIsland(int width, int height, float frequency, int octaves, int max_height, int min_height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
-    dtl::shape::PerlinIsland<uint_fast8_t>(frequency, octaves, max_height, min_height).draw(matrix);
+    dtl::shape::PerlinIsland<uint_fast8_t>(frequency, octaves, max_height, min_height).drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
 }
 
 Array DTL::PerlinLoopIsland(int width, int height, float frequency, int octaves, int max_height, int min_height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
-    dtl::shape::PerlinLoopIsland<uint_fast8_t>(frequency, octaves, max_height, min_height).draw(matrix);
+    dtl::shape::PerlinLoopIsland<uint_fast8_t>(frequency, octaves, max_height, min_height).drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
 }
 
 Array DTL::PerlinSolitaryIsland(int width, int height, float truncated_proportion_, float mountain_proportion_, float frequency, int octaves, int max_height, int min_height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
-    dtl::shape::PerlinSolitaryIsland<uint_fast8_t>(truncated_proportion_, mountain_proportion_, frequency, octaves, max_height, min_height).draw(matrix);
+    dtl::shape::PerlinSolitaryIsland<uint_fast8_t>(truncated_proportion_, mountain_proportion_, frequency, octaves, max_height, min_height).drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
 }
 
@@ -191,34 +194,39 @@ Array DTL::RogueLike(int width, int height, int max_ways, int min_room_width, in
     dtl::shape::RogueLike<uint_fast8_t>(0, 1, 2, 3, 4, max_ways,
                                         dtl::base::MatrixRange(min_room_width, min_room_height, max_room_width, max_room_height),
                                         dtl::base::MatrixRange(min_way_horizontal, min_way_vertical, max_way_horizontal, max_way_vertical))
-        .draw(matrix);
+        .drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
 }
 
 Array DTL::SimpleRogueLike(int width, int height, int division_min, int division_max, int room_min_x, int room_max_x, int room_min_y, int room_max_y)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
-    dtl::shape::SimpleRogueLike<uint_fast8_t>(1, 2, division_min, division_max, room_min_x, room_max_x, room_min_y, room_max_y).draw(matrix);
+    dtl::shape::SimpleRogueLike<uint_fast8_t>(1, 2, division_min, division_max, room_min_x, room_max_x, room_min_y, room_max_y).drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
 }
 
 Array DTL::MazeDig(int width, int height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
-    dtl::shape::MazeDig<uint_fast8_t>(1, 0).draw(matrix);
+    dtl::shape::MazeDig<uint_fast8_t, dtl::random::DefaultRandom>(1, 0).drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
 }
 
 Array DTL::MazeBar(int width, int height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
-    dtl::shape::MazeBar<uint_fast8_t>(1, 0).draw(matrix);
+    dtl::shape::MazeBar<uint_fast8_t>(1, 0).drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
 }
 
 Array DTL::ClusteringMaze(int width, int height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
-    dtl::shape::ClusteringMaze<uint_fast8_t>(1).draw(matrix);
+    dtl::shape::ClusteringMaze<uint_fast8_t>(1).drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
+}
+
+void DTL::SetSeed(int seed)
+{
+    _seed = seed;
 }

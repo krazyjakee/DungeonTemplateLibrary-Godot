@@ -5,6 +5,7 @@
 
 [node name="ClusteringMaze" type="Node2D"]
 script = ExtResource("1_3pyjj")
+map_size = 10
 
 [node name="DrawMatrix2D" type="Node2D" parent="."]
 script = ExtResource("2_4ew2q")

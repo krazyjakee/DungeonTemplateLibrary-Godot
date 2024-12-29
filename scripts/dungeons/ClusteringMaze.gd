@@ -15,6 +15,7 @@ func draw_dungeon():
 		Color.WHITE
 	]
 	var dtl := DTL.new()
+	dtl.SetSeed(1)
 	var matrix := dtl.ClusteringMaze(map_size, map_size)
 	for child in get_children():
 		if child is DrawMatrix2D:
