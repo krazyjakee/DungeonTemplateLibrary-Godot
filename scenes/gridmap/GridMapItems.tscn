@@ -1,0 +1,280 @@
+[gd_scene load_steps=93 format=3 uid="uid://cc81rygvdkdh1"]
+
+[ext_resource type="PackedScene" uid="uid://da0ptt38h0e47" path="res://assets/models/modular-ruins/Arch_Gothic.fbx" id="1_3uuvn"]
+[ext_resource type="PackedScene" uid="uid://dhrbqpaj4p361" path="res://assets/models/modular-ruins/Arch_Gothic_RoundColumn.fbx" id="2_4vhq6"]
+[ext_resource type="PackedScene" uid="uid://bxgpoq4yhddj7" path="res://assets/models/modular-ruins/Arch_Round.fbx" id="3_gvqy8"]
+[ext_resource type="PackedScene" uid="uid://ivhag8h8rusd" path="res://assets/models/modular-ruins/Arch_Round_RoundColumn.fbx" id="4_scd0q"]
+[ext_resource type="PackedScene" uid="uid://c33cymfkta4ub" path="res://assets/models/modular-ruins/Barrel.fbx" id="5_iwerf"]
+[ext_resource type="PackedScene" uid="uid://c4sqlbw61ti1q" path="res://assets/models/modular-ruins/BearTrap_Closed.fbx" id="6_tyqod"]
+[ext_resource type="PackedScene" uid="uid://btofkjpoia38x" path="res://assets/models/modular-ruins/BearTrap_Open.fbx" id="7_i22k7"]
+[ext_resource type="PackedScene" uid="uid://btg6j7jr0gbmi" path="res://assets/models/modular-ruins/Bookcase_Empty.fbx" id="8_0bsl4"]
+[ext_resource type="PackedScene" uid="uid://c6yqc282d8p0y" path="res://assets/models/modular-ruins/Bookcase_Full.fbx" id="9_ilcut"]
+[ext_resource type="PackedScene" uid="uid://cyr1a4brvue5s" path="res://assets/models/modular-ruins/Brick.fbx" id="10_rti2i"]
+[ext_resource type="PackedScene" uid="uid://jy28svmjmgdk" path="res://assets/models/modular-ruins/Bricks.fbx" id="11_6d5y3"]
+[ext_resource type="PackedScene" uid="uid://rehxl2ckjf26" path="res://assets/models/modular-ruins/BridgeSection.fbx" id="12_iahpp"]
+[ext_resource type="PackedScene" uid="uid://1776i1gpfgf8" path="res://assets/models/modular-ruins/Bush_1x1.fbx" id="13_52qqc"]
+[ext_resource type="PackedScene" uid="uid://d1xmhydwfcaao" path="res://assets/models/modular-ruins/Bush_2x1.fbx" id="14_m5vqg"]
+[ext_resource type="PackedScene" uid="uid://dr7p5t6ldskpq" path="res://assets/models/modular-ruins/Bush_2x2.fbx" id="15_3ervi"]
+[ext_resource type="PackedScene" uid="uid://5br6qd5jcilb" path="res://assets/models/modular-ruins/Bush_Large.fbx" id="16_axqd4"]
+[ext_resource type="PackedScene" uid="uid://br8nrmsl1yh8m" path="res://assets/models/modular-ruins/Bush_Round.fbx" id="17_5vh40"]
+[ext_resource type="PackedScene" uid="uid://blly35gi0puc4" path="res://assets/models/modular-ruins/Candles_1.fbx" id="18_qapw7"]
+[ext_resource type="PackedScene" uid="uid://coluwmw2l4afy" path="res://assets/models/modular-ruins/Candles_2.fbx" id="19_lwhkj"]
+[ext_resource type="PackedScene" uid="uid://diegpqsofwlq5" path="res://assets/models/modular-ruins/Cart.fbx" id="20_httvi"]
+[ext_resource type="PackedScene" uid="uid://cma84rtj33v3x" path="res://assets/models/modular-ruins/Character_Animated.fbx" id="21_cj53t"]
+[ext_resource type="PackedScene" uid="uid://d22dr4yrk5lwn" path="res://assets/models/modular-ruins/Chest.fbx" id="22_xs62q"]
+[ext_resource type="PackedScene" uid="uid://cbtwxeta3ehkb" path="res://assets/models/modular-ruins/Chest_Gold.fbx" id="23_t2pxf"]
+[ext_resource type="PackedScene" uid="uid://clw3eq75t0x21" path="res://assets/models/modular-ruins/Column_BridgeSupport.fbx" id="24_ck4j1"]
+[ext_resource type="PackedScene" uid="uid://b1vj8vywr4fsh" path="res://assets/models/modular-ruins/Column_Round.fbx" id="25_pj52v"]
+[ext_resource type="PackedScene" uid="uid://dacikkj5p4lkq" path="res://assets/models/modular-ruins/Column_Round_Short.fbx" id="26_1iw7x"]
+[ext_resource type="PackedScene" uid="uid://y3bq44e8arip" path="res://assets/models/modular-ruins/Column_Square.fbx" id="27_cs2or"]
+[ext_resource type="PackedScene" uid="uid://blb22oglj6jbc" path="res://assets/models/modular-ruins/Crate.fbx" id="28_et2m2"]
+[ext_resource type="PackedScene" uid="uid://bovpx7kos02lp" path="res://assets/models/modular-ruins/Curve_1.fbx" id="29_ewslo"]
+[ext_resource type="PackedScene" uid="uid://cmdjw55xp386o" path="res://assets/models/modular-ruins/Curve_1_Overgrown.fbx" id="30_fxy3v"]
+[ext_resource type="PackedScene" uid="uid://bbkjbtefm7tfh" path="res://assets/models/modular-ruins/Curve_2.fbx" id="31_3eph4"]
+[ext_resource type="PackedScene" uid="uid://dg601jdtn0r4u" path="res://assets/models/modular-ruins/Curve_2_Overgrown.fbx" id="32_4wsno"]
+[ext_resource type="PackedScene" uid="uid://4ae1wrb1vhso" path="res://assets/models/modular-ruins/DeadTree_1.fbx" id="33_o7ucw"]
+[ext_resource type="PackedScene" uid="uid://cug3hqs44uyum" path="res://assets/models/modular-ruins/DeadTree_2.fbx" id="34_y0nnj"]
+[ext_resource type="PackedScene" uid="uid://dxnnty1ad4gsv" path="res://assets/models/modular-ruins/DeadTree_3.fbx" id="35_4ummw"]
+[ext_resource type="PackedScene" uid="uid://bowl3t70x66s0" path="res://assets/models/modular-ruins/Doors_GothicArch.fbx" id="36_fkfa8"]
+[ext_resource type="PackedScene" uid="uid://ju4mcrk3728k" path="res://assets/models/modular-ruins/Doors_GothicArch_Covered.fbx" id="37_6pd7p"]
+[ext_resource type="PackedScene" uid="uid://tpxui0dw5qic" path="res://assets/models/modular-ruins/Doors_RoundArch.fbx" id="38_y2noj"]
+[ext_resource type="PackedScene" uid="uid://bie3e3cvidbi4" path="res://assets/models/modular-ruins/Doors_RoundArch_Covered.fbx" id="39_fadry"]
+[ext_resource type="PackedScene" uid="uid://bw0a6dgivwsws" path="res://assets/models/modular-ruins/Flag_GothicArch.fbx" id="40_b53pr"]
+[ext_resource type="PackedScene" uid="uid://i8n1q56x4r6p" path="res://assets/models/modular-ruins/Flag_RoundArch.fbx" id="41_5amnd"]
+[ext_resource type="PackedScene" uid="uid://ccdyu4vxi2niw" path="res://assets/models/modular-ruins/Flag_Wall2.fbx" id="42_lsm8u"]
+[ext_resource type="PackedScene" uid="uid://btugmy1dcjb5l" path="res://assets/models/modular-ruins/Flag_Wall.fbx" id="43_2g6tx"]
+[ext_resource type="PackedScene" uid="uid://dtpd51p4ts0yv" path="res://assets/models/modular-ruins/Floor_Diamond.fbx" id="44_s80fn"]
+[ext_resource type="PackedScene" uid="uid://c1covkiucu1p2" path="res://assets/models/modular-ruins/Floor_Hole_Corner.fbx" id="45_v6rs6"]
+[ext_resource type="PackedScene" uid="uid://sbn4d7yum2ph" path="res://assets/models/modular-ruins/Floor_Hole_Straight.fbx" id="46_seukq"]
+[ext_resource type="PackedScene" uid="uid://cgfpu0fw5qao4" path="res://assets/models/modular-ruins/Floor_SquareLarge.fbx" id="47_icu0w"]
+[ext_resource type="PackedScene" uid="uid://dm1x24f5js41q" path="res://assets/models/modular-ruins/Floor_Squares.fbx" id="48_31jve"]
+[ext_resource type="PackedScene" uid="uid://d20o3lrgpdh2q" path="res://assets/models/modular-ruins/Floor_Standard.fbx" id="49_uuuq1"]
+[ext_resource type="PackedScene" uid="uid://co3nv7esojscj" path="res://assets/models/modular-ruins/Floor_Standard_Half.fbx" id="50_88exp"]
+[ext_resource type="PackedScene" uid="uid://bujykon46ic48" path="res://assets/models/modular-ruins/Floor_Tree.fbx" id="51_lhsw3"]
+[ext_resource type="PackedScene" uid="uid://b8s6cuch38dj2" path="res://assets/models/modular-ruins/Grass.fbx" id="52_m7woo"]
+[ext_resource type="PackedScene" uid="uid://s14osjk0a8qp" path="res://assets/models/modular-ruins/Pot1.fbx" id="53_xv5gr"]
+[ext_resource type="PackedScene" uid="uid://dl62h4tnw3352" path="res://assets/models/modular-ruins/Pot1_Broken.fbx" id="54_u65ua"]
+[ext_resource type="PackedScene" uid="uid://chgl1gbk0w2fo" path="res://assets/models/modular-ruins/Pot2.fbx" id="55_ifw1w"]
+[ext_resource type="PackedScene" uid="uid://k8hjpkb4aukb" path="res://assets/models/modular-ruins/Pot2_Broken.fbx" id="56_4pvm6"]
+[ext_resource type="PackedScene" uid="uid://vquxh61lhv4m" path="res://assets/models/modular-ruins/Pot3.fbx" id="57_12o0o"]
+[ext_resource type="PackedScene" uid="uid://dqm0sml88dxtw" path="res://assets/models/modular-ruins/Pot3_Broken.fbx" id="58_g5q68"]
+[ext_resource type="PackedScene" uid="uid://ce034rasnvf10" path="res://assets/models/modular-ruins/Rail_Corner.fbx" id="59_g14i3"]
+[ext_resource type="PackedScene" uid="uid://clvgi5w1ktqus" path="res://assets/models/modular-ruins/Rail_Divider.fbx" id="60_1imwg"]
+[ext_resource type="PackedScene" uid="uid://bth8ty8u36h8d" path="res://assets/models/modular-ruins/Rail_Straight.fbx" id="61_sfyt1"]
+[ext_resource type="PackedScene" uid="uid://bpbxrngjonim6" path="res://assets/models/modular-ruins/Skull.fbx" id="62_nquc1"]
+[ext_resource type="PackedScene" uid="uid://cluhayesefv83" path="res://assets/models/modular-ruins/Stairs.fbx" id="63_cl7mg"]
+[ext_resource type="PackedScene" uid="uid://pys3kv5vqep3" path="res://assets/models/modular-ruins/Stairs_2.fbx" id="64_tuwov"]
+[ext_resource type="PackedScene" uid="uid://drcpsvovqsds2" path="res://assets/models/modular-ruins/Statue_Fox.fbx" id="65_yah5b"]
+[ext_resource type="PackedScene" uid="uid://bu3x0g80w0vyy" path="res://assets/models/modular-ruins/Statue_Stag.fbx" id="66_rh2j0"]
+[ext_resource type="PackedScene" uid="uid://bvg0ue4acjyl7" path="res://assets/models/modular-ruins/Support_Center.fbx" id="67_ywchl"]
+[ext_resource type="PackedScene" uid="uid://osgp33oqwnjc" path="res://assets/models/modular-ruins/Support_Left.fbx" id="68_n7oal"]
+[ext_resource type="PackedScene" uid="uid://cba0ddeslnm4k" path="res://assets/models/modular-ruins/Support_Right.fbx" id="69_ydwe7"]
+[ext_resource type="PackedScene" uid="uid://bh5yw73enki53" path="res://assets/models/modular-ruins/Support_Tall.fbx" id="70_c2726"]
+[ext_resource type="PackedScene" uid="uid://bx0ukkkwqqxed" path="res://assets/models/modular-ruins/Torch.fbx" id="71_a2px5"]
+[ext_resource type="PackedScene" uid="uid://bmi3antlgu316" path="res://assets/models/modular-ruins/Trapdoor.fbx" id="72_c0cso"]
+[ext_resource type="PackedScene" uid="uid://bosknw12j1llb" path="res://assets/models/modular-ruins/Tree_1.fbx" id="73_if435"]
+[ext_resource type="PackedScene" uid="uid://ddersxmyfwtw3" path="res://assets/models/modular-ruins/Tree_2.fbx" id="74_p7lxm"]
+[ext_resource type="PackedScene" uid="uid://cu3u8ht7eo8qa" path="res://assets/models/modular-ruins/Tree_3.fbx" id="75_rsmem"]
+[ext_resource type="PackedScene" uid="uid://gbg1wpyd5tvg" path="res://assets/models/modular-ruins/Wall.fbx" id="76_lcemi"]
+[ext_resource type="PackedScene" uid="uid://bsi0ecxcnbdwd" path="res://assets/models/modular-ruins/Wall_ArchGothic.fbx" id="77_36g0k"]
+[ext_resource type="PackedScene" uid="uid://bp2eg0d30bd7s" path="res://assets/models/modular-ruins/Wall_ArchRound.fbx" id="78_us5ns"]
+[ext_resource type="PackedScene" uid="uid://ccn71giymp3rc" path="res://assets/models/modular-ruins/Wall_ArchRound_Broken.fbx" id="79_bvbrp"]
+[ext_resource type="PackedScene" uid="uid://bnkhktycvoa1m" path="res://assets/models/modular-ruins/Wall_ArchRound_Overgrown.fbx" id="80_knyj0"]
+[ext_resource type="PackedScene" uid="uid://01501rhblnn" path="res://assets/models/modular-ruins/Wall_ArchRound_Overgrown_Broken.fbx" id="81_ded8v"]
+[ext_resource type="PackedScene" uid="uid://djgkc1l077euk" path="res://assets/models/modular-ruins/Wall_Broken.fbx" id="82_s0x2u"]
+[ext_resource type="PackedScene" uid="uid://btalgwl8v66lc" path="res://assets/models/modular-ruins/Wall_Double_Broken.fbx" id="83_16ecx"]
+[ext_resource type="PackedScene" uid="uid://b11ie5mks8uto" path="res://assets/models/modular-ruins/Wall_Double_Hole.fbx" id="84_51c6j"]
+[ext_resource type="PackedScene" uid="uid://by1h1dia7er3k" path="res://assets/models/modular-ruins/Wall_Half.fbx" id="85_dxjah"]
+[ext_resource type="PackedScene" uid="uid://cghjxslfry1qc" path="res://assets/models/modular-ruins/Wall_Hole.fbx" id="86_tbxmj"]
+[ext_resource type="PackedScene" uid="uid://bsekcii5byhsb" path="res://assets/models/modular-ruins/Wall_Overgrown.fbx" id="87_3do6y"]
+[ext_resource type="PackedScene" uid="uid://c42v7ulnch1o4" path="res://assets/models/modular-ruins/Window_Bars.fbx" id="88_y2eg6"]
+[ext_resource type="PackedScene" uid="uid://dnjtt4p2yxs7c" path="res://assets/models/modular-ruins/Window_Bars_Double_Overgrown.fbx" id="89_l1ark"]
+[ext_resource type="PackedScene" uid="uid://clji3jjyetcm6" path="res://assets/models/modular-ruins/Window_Bars_Overgrown.fbx" id="90_bceot"]
+[ext_resource type="PackedScene" uid="uid://8n8h80he7mfs" path="res://assets/models/modular-ruins/Window_Open.fbx" id="91_cpv1y"]
+[ext_resource type="PackedScene" uid="uid://m70dnqtcllog" path="res://assets/models/modular-ruins/Window_Open_Double.fbx" id="92_dtwj7"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="Arch_Gothic" parent="." instance=ExtResource("1_3uuvn")]
+
+[node name="Arch_Gothic_RoundColumn" parent="." instance=ExtResource("2_4vhq6")]
+
+[node name="Arch_Round" parent="." instance=ExtResource("3_gvqy8")]
+
+[node name="Arch_Round_RoundColumn" parent="." instance=ExtResource("4_scd0q")]
+
+[node name="Barrel" parent="." instance=ExtResource("5_iwerf")]
+
+[node name="BearTrap_Closed" parent="." instance=ExtResource("6_tyqod")]
+
+[node name="BearTrap_Open" parent="." instance=ExtResource("7_i22k7")]
+
+[node name="Bookcase_Empty" parent="." instance=ExtResource("8_0bsl4")]
+
+[node name="Bookcase_Full" parent="." instance=ExtResource("9_ilcut")]
+
+[node name="Brick" parent="." instance=ExtResource("10_rti2i")]
+
+[node name="Bricks" parent="." instance=ExtResource("11_6d5y3")]
+
+[node name="BridgeSection" parent="." instance=ExtResource("12_iahpp")]
+
+[node name="Bush_1x1" parent="." instance=ExtResource("13_52qqc")]
+
+[node name="Bush_2x1" parent="." instance=ExtResource("14_m5vqg")]
+
+[node name="Bush_2x2" parent="." instance=ExtResource("15_3ervi")]
+
+[node name="Bush_Large" parent="." instance=ExtResource("16_axqd4")]
+
+[node name="Bush_Round" parent="." instance=ExtResource("17_5vh40")]
+
+[node name="Candles_1" parent="." instance=ExtResource("18_qapw7")]
+
+[node name="Candles_2" parent="." instance=ExtResource("19_lwhkj")]
+
+[node name="Cart" parent="." instance=ExtResource("20_httvi")]
+
+[node name="Character_Animated" parent="." instance=ExtResource("21_cj53t")]
+
+[node name="Chest" parent="." instance=ExtResource("22_xs62q")]
+
+[node name="Chest_Gold" parent="." instance=ExtResource("23_t2pxf")]
+
+[node name="Column_BridgeSupport" parent="." instance=ExtResource("24_ck4j1")]
+
+[node name="Column_Round" parent="." instance=ExtResource("25_pj52v")]
+
+[node name="Column_Round_Short" parent="." instance=ExtResource("26_1iw7x")]
+
+[node name="Column_Square" parent="." instance=ExtResource("27_cs2or")]
+
+[node name="Crate" parent="." instance=ExtResource("28_et2m2")]
+
+[node name="Curve_1" parent="." instance=ExtResource("29_ewslo")]
+
+[node name="Curve_1_Overgrown" parent="." instance=ExtResource("30_fxy3v")]
+
+[node name="Curve_2" parent="." instance=ExtResource("31_3eph4")]
+
+[node name="Curve_2_Overgrown" parent="." instance=ExtResource("32_4wsno")]
+
+[node name="DeadTree_1" parent="." instance=ExtResource("33_o7ucw")]
+
+[node name="DeadTree_2" parent="." instance=ExtResource("34_y0nnj")]
+
+[node name="DeadTree_3" parent="." instance=ExtResource("35_4ummw")]
+
+[node name="Doors_GothicArch" parent="." instance=ExtResource("36_fkfa8")]
+
+[node name="Doors_GothicArch_Covered" parent="." instance=ExtResource("37_6pd7p")]
+
+[node name="Doors_RoundArch" parent="." instance=ExtResource("38_y2noj")]
+
+[node name="Doors_RoundArch_Covered" parent="." instance=ExtResource("39_fadry")]
+
+[node name="Flag_GothicArch" parent="." instance=ExtResource("40_b53pr")]
+
+[node name="Flag_RoundArch" parent="." instance=ExtResource("41_5amnd")]
+
+[node name="Flag_Wall2" parent="." instance=ExtResource("42_lsm8u")]
+
+[node name="Flag_Wall" parent="." instance=ExtResource("43_2g6tx")]
+
+[node name="Floor_Diamond" parent="." instance=ExtResource("44_s80fn")]
+
+[node name="Floor_Hole_Corner" parent="." instance=ExtResource("45_v6rs6")]
+
+[node name="Floor_Hole_Straight" parent="." instance=ExtResource("46_seukq")]
+
+[node name="Floor_SquareLarge" parent="." instance=ExtResource("47_icu0w")]
+
+[node name="Floor_Squares" parent="." instance=ExtResource("48_31jve")]
+
+[node name="Floor_Standard" parent="." instance=ExtResource("49_uuuq1")]
+
+[node name="Floor_Standard_Half" parent="." instance=ExtResource("50_88exp")]
+
+[node name="Floor_Tree" parent="." instance=ExtResource("51_lhsw3")]
+
+[node name="Grass" parent="." instance=ExtResource("52_m7woo")]
+
+[node name="Pot1" parent="." instance=ExtResource("53_xv5gr")]
+
+[node name="Pot1_Broken" parent="." instance=ExtResource("54_u65ua")]
+
+[node name="Pot2" parent="." instance=ExtResource("55_ifw1w")]
+
+[node name="Pot2_Broken" parent="." instance=ExtResource("56_4pvm6")]
+
+[node name="Pot3" parent="." instance=ExtResource("57_12o0o")]
+
+[node name="Pot3_Broken" parent="." instance=ExtResource("58_g5q68")]
+
+[node name="Rail_Corner" parent="." instance=ExtResource("59_g14i3")]
+
+[node name="Rail_Divider" parent="." instance=ExtResource("60_1imwg")]
+
+[node name="Rail_Straight" parent="." instance=ExtResource("61_sfyt1")]
+
+[node name="Skull" parent="." instance=ExtResource("62_nquc1")]
+
+[node name="Stairs" parent="." instance=ExtResource("63_cl7mg")]
+
+[node name="Stairs_2" parent="." instance=ExtResource("64_tuwov")]
+
+[node name="Statue_Fox" parent="." instance=ExtResource("65_yah5b")]
+
+[node name="Statue_Stag" parent="." instance=ExtResource("66_rh2j0")]
+
+[node name="Support_Center" parent="." instance=ExtResource("67_ywchl")]
+
+[node name="Support_Left" parent="." instance=ExtResource("68_n7oal")]
+
+[node name="Support_Right" parent="." instance=ExtResource("69_ydwe7")]
+
+[node name="Support_Tall" parent="." instance=ExtResource("70_c2726")]
+
+[node name="Torch" parent="." instance=ExtResource("71_a2px5")]
+
+[node name="Trapdoor" parent="." instance=ExtResource("72_c0cso")]
+
+[node name="Tree_1" parent="." instance=ExtResource("73_if435")]
+
+[node name="Tree_2" parent="." instance=ExtResource("74_p7lxm")]
+
+[node name="Tree_3" parent="." instance=ExtResource("75_rsmem")]
+
+[node name="Wall" parent="." instance=ExtResource("76_lcemi")]
+
+[node name="Wall_ArchGothic" parent="." instance=ExtResource("77_36g0k")]
+
+[node name="Wall_ArchRound" parent="." instance=ExtResource("78_us5ns")]
+
+[node name="Wall_ArchRound_Broken" parent="." instance=ExtResource("79_bvbrp")]
+
+[node name="Wall_ArchRound_Overgrown" parent="." instance=ExtResource("80_knyj0")]
+
+[node name="Wall_ArchRound_Overgrown_Broken" parent="." instance=ExtResource("81_ded8v")]
+
+[node name="Wall_Broken" parent="." instance=ExtResource("82_s0x2u")]
+
+[node name="Wall_Double_Broken" parent="." instance=ExtResource("83_16ecx")]
+
+[node name="Wall_Double_Hole" parent="." instance=ExtResource("84_51c6j")]
+
+[node name="Wall_Half" parent="." instance=ExtResource("85_dxjah")]
+
+[node name="Wall_Hole" parent="." instance=ExtResource("86_tbxmj")]
+
+[node name="Wall_Overgrown" parent="." instance=ExtResource("87_3do6y")]
+
+[node name="Window_Bars" parent="." instance=ExtResource("88_y2eg6")]
+
+[node name="Window_Bars_Double_Overgrown" parent="." instance=ExtResource("89_l1ark")]
+
+[node name="Window_Bars_Overgrown" parent="." instance=ExtResource("90_bceot")]
+
+[node name="Window_Open" parent="." instance=ExtResource("91_cpv1y")]
+
+[node name="Window_Open_Double" parent="." instance=ExtResource("92_dtwj7")]

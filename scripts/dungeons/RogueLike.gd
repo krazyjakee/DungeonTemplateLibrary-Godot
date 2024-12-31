@@ -43,5 +43,5 @@ func draw_dungeon():
 	for child in get_children():
 		if child is DrawMatrix2D:
 			child.draw_matrix(matrix, colors, 3.0)
-		if child is DrawMatrix3D:
-			child.draw_terrain(matrix)
+		if child is DrawRuins3D:
+			child.draw_ruins(matrix)
