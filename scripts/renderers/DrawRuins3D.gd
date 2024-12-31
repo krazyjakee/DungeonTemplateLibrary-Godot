@@ -107,6 +107,7 @@ func draw_ruins(matrix: Array):
 								
 				if type_name == "Floor_Diamond":
 					var surrounding_cells = get_surrounding_cells(matrix, x, y)
+	
 					# -- Place columns in corners if the corner is a Wall (1) 
 					#    and the two adjacent orth cells around that corner are Floors (2 or 4).
 					# -- Make sure we actually got all 8 neighbors (surrounding_cells.size() == 8).
@@ -150,6 +151,16 @@ func draw_ruins(matrix: Array):
 						set_cell_item(Vector3i(new_x - 5, 0, new_y), type_id, orientation)
 						set_cell_item(Vector3i(new_x - doorway_wall_movement, 0, new_y), item_ids[1], horizontal_orientation)
 						set_cell_item(Vector3i(new_x + doorway_wall_movement, 0, new_y), item_ids[1], horizontal_orientation)
+						
+					var surrounding_cells = get_surrounding_cells(matrix, x, y)
+					if surrounding_cells[0] in [2, 4]:
+						set_cell_item(Vector3i(new_x - wall_movement - 8, 0, new_y - wall_movement - 8), item_ids[5], orientation)
+					if surrounding_cells[2] in [2, 4]:
+						set_cell_item(Vector3i(new_x + wall_movement - 8, 0, new_y - wall_movement - 8), item_ids[5], orientation)
+					if surrounding_cells[5] in [2, 4]:
+						set_cell_item(Vector3i(new_x - wall_movement - 8, 0, new_y + wall_movement - 3), item_ids[5], orientation)
+					if surrounding_cells[7] in [2, 4]:
+						set_cell_item(Vector3i(new_x + wall_movement, 0, new_y + wall_movement), item_ids[5], orientation)
 					continue
 					
 				if type_name == "Wall":
