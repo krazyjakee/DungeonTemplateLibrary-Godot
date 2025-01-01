@@ -1,6 +1,10 @@
 @tool
 extends Node2D
 
+@export var seed: int = 0:
+	set(new_value):
+		seed = new_value
+		draw_dungeon()
 @export var map_size: int = 200:
 	set(new_value):
 		map_size = new_value
@@ -39,6 +43,7 @@ func draw_dungeon():
 		Color.YELLOW_GREEN
 	]
 	var dtl := DTL.new()
+	dtl.SetSeed(seed)
 	var matrix := dtl.RogueLike(map_size, map_size, max_ways, min_room_size.x, max_room_size.x, min_room_size.y, max_room_size.y, min_way_size.x, max_way_size.x, min_way_size.y, max_way_size.y)
 	for child in get_children():
 		if child is DrawMatrix2D:
