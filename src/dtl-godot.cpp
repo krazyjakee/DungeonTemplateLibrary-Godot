@@ -215,7 +215,7 @@ Array DTL::MazeDig(int width, int height)
 Array DTL::MazeBar(int width, int height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
-    dtl::shape::MazeBar<uint_fast8_t>(1, 0).drawSEED(matrix, _seed);
+    dtl::shape::MazeBar<uint_fast8_t>(0, 1).drawSEED(matrix, _seed);
     return MatrixToGodotArray(matrix);
 }
 

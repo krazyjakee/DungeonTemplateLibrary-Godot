@@ -5,3 +5,5 @@
 *.dblite
 addons/dtl/bin/~dtl.windows.template_debug.x86_64.dll
 *.TMP
+.cache/
+*.template_release

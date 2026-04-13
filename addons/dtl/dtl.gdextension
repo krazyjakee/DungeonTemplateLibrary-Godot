@@ -6,8 +6,8 @@ reloadable = true
 
 [libraries]
 
-# macos.debug = "res://addons/dtl/bin/dtl.macos.template_debug.framework"
-# macos.release = "res://addons/dtl/bin/dtl.macos.template_release.framework"
+macos.debug.x86_64 = "res://addons/dtl/bin/dtl.macos.template_release.framework"
+macos.release.x86_64 = "res://addons/dtl/bin/dtl.macos.template_release.framework"
 # ios.debug = "res://addons/dtl/bin/dtl.ios.template_debug.xcframework"
 # ios.release = "res://addons/dtl/bin/dtl.ios.template_release.xcframework"
 windows.debug.x86_32 = "res://addons/dtl/bin/dtl.windows.template_debug.x86_32.dll"
