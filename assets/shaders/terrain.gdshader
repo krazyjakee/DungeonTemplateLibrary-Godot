@@ -21,48 +21,32 @@ uniform vec3 grass_color  : source_color = vec3(0.2, 0.6, 0.1);
 uniform vec3 cliff_color  : source_color = vec3(0.5, 0.5, 0.4);
 uniform vec3 snow_color   : source_color = vec3(1.0, 1.0, 1.0);
 
-// We'll pass the final world-space height to the fragment shader
-varying float v_world_height;
+// Blend width for smooth transitions between terrain zones
+uniform float blend_width : hint_range(0.0, 5.0) = 0.3;
 
 void vertex() {
-    // Sample height from the texture
     float height_val = texture(height_texture, UV).r * amplitude;
-    
-    // If the sampled height is below sea_level, clamp it (so we get a flat ocean).
     if (height_val < sea_level) {
         height_val = sea_level;
     }
-    
-    // Move the vertex up according to the final height.
     VERTEX.y += height_val;
-    
-    // Pass this height into a varying so the fragment function can color properly.
-    v_world_height = VERTEX.y;
 }
 
 void fragment() {
-    // Compare our vertex height to thresholds
-    // Note: The thresholds are "above" sea_level, so consider how you want to measure.
-    // Here we measure relative to actual world height for simplicity.
-    
-    if (v_world_height <= sea_level + 0.001) {
-        // Ocean
-        ALBEDO = ocean_color;
-    } 
-    else if (v_world_height <= sea_level + beach_level) {
-        // Beach
-        ALBEDO = beach_color;
-    } 
-    else if (v_world_height <= sea_level + cliff_level) {
-        // Grass
-        ALBEDO = grass_color;
-    }
-    else if (v_world_height <= sea_level + snow_level) {
-        // Cliffs
-        ALBEDO = cliff_color;
-    } 
-    else {
-        // Snow
-        ALBEDO = snow_color;
-    }
+    // Sample height per-pixel for accurate color boundaries
+    float raw_height = texture(height_texture, UV).r * amplitude;
+    float h = raw_height - sea_level;
+
+    float beach_t = smoothstep(-blend_width * 0.5, blend_width * 0.5, h);
+    float grass_t = smoothstep(beach_level - blend_width * 0.5, beach_level + blend_width * 0.5, h);
+    float cliff_t = smoothstep(cliff_level - blend_width * 0.5, cliff_level + blend_width * 0.5, h);
+    float snow_t  = smoothstep(snow_level - blend_width * 0.5, snow_level + blend_width * 0.5, h);
+
+    vec3 color = ocean_color;
+    color = mix(color, beach_color, beach_t);
+    color = mix(color, grass_color, grass_t);
+    color = mix(color, cliff_color, cliff_t);
+    color = mix(color, snow_color, snow_t);
+
+    ALBEDO = color;
 }

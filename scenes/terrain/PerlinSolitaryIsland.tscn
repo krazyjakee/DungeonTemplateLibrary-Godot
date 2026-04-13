@@ -1,18 +1,17 @@
-[gd_scene load_steps=5 format=3 uid="uid://boiqsaeb4riij"]
+[gd_scene load_steps=4 format=3 uid="uid://boiqsaeb4riij"]
 
-[ext_resource type="Script" path="res://scripts/terrain/PerlinSolitaryIsland.gd" id="1_n1emm"]
-[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_vo5bb"]
-[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_xl3jo"]
-[ext_resource type="Script" path="res://addons/freelookcamera/free_look_camera.gd" id="4_j3wu3"]
+[ext_resource type="Script" uid="uid://glhy8ie7drbn" path="res://scripts/terrain/PerlinSolitaryIsland.gd" id="1_n1emm"]
+[ext_resource type="Script" uid="uid://cwmomg38dpolk" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_vo5bb"]
+[ext_resource type="Script" uid="uid://d1dsscsnh32r3" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_xl3jo"]
 
 [node name="PerlinSolitaryIsland" type="Node3D"]
 script = ExtResource("1_n1emm")
 
 [node name="DrawMatrix2D" type="Node2D" parent="."]
-visible = false
 script = ExtResource("2_vo5bb")
 
 [node name="DrawMatrix3D" type="Node3D" parent="."]
+visible = false
 script = ExtResource("3_xl3jo")
 amplitude = 80.48
 sea_level = 30.0
@@ -20,5 +19,5 @@ beach_level = 2.0
 cliff_level = 27.095
 snow_level = 38.27
 
-[node name="Camera3D" type="Camera3D" parent="."]
-script = ExtResource("4_j3wu3")
+[node name="TerrainLOD" type="TerrainLOD" parent="."]
+draw_matrix_3d = NodePath("../DrawMatrix3D")

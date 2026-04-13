@@ -10,24 +10,25 @@ extends Camera3D
 
 @onready var _velocity = default_velocity
 
+var _dragging := false
+
 func _input(event):
 	if not current:
 		return
-		
-	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		if event is InputEventMouseMotion:
-			rotation.y -= event.relative.x / 1000 * sensitivity
-			rotation.x -= event.relative.y / 1000 * sensitivity
-			rotation.x = clamp(rotation.x, PI/-2, PI/2)
-	
+
 	if event is InputEventMouseButton:
 		match event.button_index:
-			MOUSE_BUTTON_RIGHT:
-				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED if event.pressed else Input.MOUSE_MODE_VISIBLE)
-			MOUSE_BUTTON_WHEEL_UP: # increase fly velocity
+			MOUSE_BUTTON_LEFT:
+				_dragging = event.pressed
+			MOUSE_BUTTON_WHEEL_UP:
 				_velocity = clamp(_velocity * speed_scale, min_speed, max_speed)
-			MOUSE_BUTTON_WHEEL_DOWN: # decrease fly velocity
+			MOUSE_BUTTON_WHEEL_DOWN:
 				_velocity = clamp(_velocity / speed_scale, min_speed, max_speed)
+
+	if event is InputEventMouseMotion and _dragging:
+		rotation.y -= event.relative.x / 1000 * sensitivity
+		rotation.x -= event.relative.y / 1000 * sensitivity
+		rotation.x = clamp(rotation.x, PI / -2, PI / 2)
 
 func _process(delta):
 	if not current:

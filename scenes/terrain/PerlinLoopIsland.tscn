@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://u7f2ae228ctb"]
 
-[ext_resource type="Script" path="res://scripts/terrain/PerlinLoopIsland.gd" id="1_e7ot1"]
-[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_f717q"]
-[ext_resource type="Script" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_sl50d"]
+[ext_resource type="Script" uid="uid://debq0gajwu5wn" path="res://scripts/terrain/PerlinLoopIsland.gd" id="1_e7ot1"]
+[ext_resource type="Script" uid="uid://cwmomg38dpolk" path="res://scripts/renderers/DrawMatrix2D.gd" id="2_f717q"]
+[ext_resource type="Script" uid="uid://d1dsscsnh32r3" path="res://scripts/renderers/DrawMatrix3D.gd" id="3_sl50d"]
 
 [node name="PerlinLoopIsland" type="Node3D"]
 script = ExtResource("1_e7ot1")
@@ -11,6 +11,7 @@ script = ExtResource("1_e7ot1")
 script = ExtResource("2_f717q")
 
 [node name="DrawMatrix3D" type="Node3D" parent="."]
+visible = false
 script = ExtResource("3_sl50d")
 amplitude = 27.5
 sea_level = 14.145
@@ -18,3 +19,6 @@ beach_level = 1.005
 grass_level = 11.005
 cliff_level = 5.16
 snow_level = 7.295
+
+[node name="TerrainLOD" type="TerrainLOD" parent="."]
+draw_matrix_3d = NodePath("../DrawMatrix3D")

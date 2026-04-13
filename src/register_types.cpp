@@ -3,6 +3,7 @@
 // Include your DTL header here
 #include "DTL.hpp"
 #include "dtl-godot.hpp"
+#include "terrain_lod.hpp"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>
@@ -19,6 +20,7 @@ void initialize_module(ModuleInitializationLevel p_level)
 
   // Register your DTL class
   GDREGISTER_CLASS(DTL);
+  GDREGISTER_CLASS(TerrainLOD);
 }
 
 void uninitialize_module(ModuleInitializationLevel p_level)

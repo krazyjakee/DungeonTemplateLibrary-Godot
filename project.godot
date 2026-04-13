@@ -11,6 +11,10 @@ config_version=5
 [application]
 
 config/name="DungeonTemplateLibrary-Godot"
-run/main_scene="res://scenes/terrain/CellularAutomatonMixIsland.tscn"
+run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.png"
+
+[autoload]
+
+ReturnToMenu="*res://scripts/ReturnToMenu.gd"

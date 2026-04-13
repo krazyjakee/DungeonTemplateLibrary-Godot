@@ -20,9 +20,11 @@ func _ready():
 func draw_island():
 	var dtl := DTL.new()
 	var colors: Array[Color] = [Color.DARK_BLUE, Color.DARK_GREEN]
-	var matrix := dtl.CellularAutomatonIsland(map_size, map_size, iterations, probability)
+	var matrix = dtl.CellularAutomatonIsland(map_size, map_size, iterations, probability)
 	for child in get_children():
 		if child is DrawMatrix2D:
 			child.draw_matrix(matrix)
 		if child is DrawMatrix3D:
 			child.draw_terrain(matrix)
+		if child is TerrainLOD:
+			child.generate(matrix)

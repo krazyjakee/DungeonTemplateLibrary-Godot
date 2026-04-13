@@ -33,3 +33,5 @@ func draw_island():
 			child.draw_heightmap(matrix)
 		if child is DrawMatrix3D:
 			child.draw_terrain(matrix)
+		if child is TerrainLOD:
+			child.generate(matrix)

@@ -8,6 +8,7 @@ class_name DrawMatrix3D extends Node3D
 @export var cliff_level: float = 10.0: set = _set_cliff_level
 @export var snow_level: float = 10.0: set = _set_snow_level
 
+var center_height: float = 0.0
 var terrain_material := ShaderMaterial.new()
 var terrain_shader: Shader = load("res://assets/shaders/terrain.gdshader")
 var default_colors: Array[Color] = [
@@ -69,9 +70,14 @@ func draw_heightmap(matrix: Array) -> ImageTexture:
 			var color = Color(normalized_value, normalized_value, normalized_value)
 			image.set_pixel(x, y, color)
 	
+	# Sample center pixel height (corresponds to XZ origin)
+	var cx := width / 2
+	var cy := height / 2
+	center_height = image.get_pixel(cx, cy).r * amplitude
+
 	# Convert the Image to a texture
 	var texture := ImageTexture.create_from_image(image)
-	
+
 	return texture
 
 func draw_terrain(matrix: Array):
