@@ -95,7 +95,10 @@ func draw_terrain(matrix: Array):
 	terrain_material.shader = terrain_shader
 	quadmesh.material = terrain_material
 	mesh.mesh = quadmesh
+	var height_tex := draw_heightmap(matrix)
+	var tex_size := height_tex.get_size()
 	terrain_material.set_shader_parameter("amplitude", amplitude)
-	terrain_material.set_shader_parameter("height_texture", draw_heightmap(matrix))
-	
+	terrain_material.set_shader_parameter("height_texture", height_tex)
+	terrain_material.set_shader_parameter("texel_size", Vector2(1.0 / tex_size.x, 1.0 / tex_size.y))
+
 	add_child(mesh)
