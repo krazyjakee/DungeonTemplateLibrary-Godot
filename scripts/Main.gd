@@ -12,6 +12,7 @@ func load_demo(scene_path: String) -> void:
 	var instance := scene.instantiate()
 	demo_container.add_child(instance)
 	_position_camera_above_terrain(instance)
+	_wire_terrain_lod_player(instance)
 
 func return_to_menu() -> void:
 	for child in demo_container.get_children():
@@ -31,3 +32,15 @@ func _find_draw_matrix_3d(node: Node) -> DrawMatrix3D:
 		if result:
 			return result
 	return null
+
+func _wire_terrain_lod_player(root: Node) -> void:
+	for terrain in _find_terrain_lod_nodes(root):
+		terrain.player_path = terrain.get_path_to(camera)
+
+func _find_terrain_lod_nodes(node: Node) -> Array:
+	var found: Array = []
+	if node is TerrainLOD:
+		found.append(node)
+	for child in node.get_children():
+		found.append_array(_find_terrain_lod_nodes(child))
+	return found

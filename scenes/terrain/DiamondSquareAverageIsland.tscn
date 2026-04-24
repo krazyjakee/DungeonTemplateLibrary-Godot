@@ -22,4 +22,5 @@ cliff_level = 10.085
 snow_level = 15.77
 
 [node name="TerrainLOD" type="TerrainLOD" parent="."]
+collision_radius = 80.0
 draw_matrix_3d = NodePath("../DrawMatrix3D")

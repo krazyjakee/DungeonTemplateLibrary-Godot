@@ -23,4 +23,5 @@ snow_level = 4.72
 [node name="TerrainLOD" type="TerrainLOD" parent="."]
 chunk_count = 16
 lod_levels = 5
+collision_radius = 60.0
 draw_matrix_3d = NodePath("../DrawMatrix3D")

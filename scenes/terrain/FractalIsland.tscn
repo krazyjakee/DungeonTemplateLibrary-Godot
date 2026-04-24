@@ -27,4 +27,5 @@ snow_level = 12.555
 terrain_size = 1000.0
 chunk_count = 16
 lod_levels = 5
+collision_radius = 120.0
 draw_matrix_3d = NodePath("../DrawMatrix3D")

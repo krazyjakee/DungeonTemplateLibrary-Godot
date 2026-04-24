@@ -18,4 +18,5 @@ amplitude = 3.64
 sea_level = 1.165
 
 [node name="TerrainLOD" type="TerrainLOD" parent="."]
+collision_radius = 80.0
 draw_matrix_3d = NodePath("../DrawMatrix3D")
