@@ -2,12 +2,15 @@
 
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/variant/color.hpp>
+#include <godot_cpp/variant/packed_byte_array.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <queue>
+#include <thread>
 #include <utility>
 
 using namespace godot;
@@ -38,6 +41,43 @@ static inline float clampf_(float v, float lo, float hi)
 }
 static inline float lerpf_(float a, float b, float t) { return a + (b - a) * t; }
 
+// Split [0, total) across hardware_concurrency() worker threads (capped at 8;
+// runs serially below a small total so tiny passes don't pay thread-spawn
+// overhead). Used for the embarrassingly-parallel per-row passes (blur,
+// steepness, image pack, relax).
+template <typename F>
+static void parallel_rows(int total, F &&body)
+{
+  if (total <= 0)
+    return;
+  int hw = (int)std::thread::hardware_concurrency();
+  if (hw <= 0)
+    hw = 2;
+  int n = std::min(hw, 8);
+  if (n <= 1 || total < 64)
+  {
+    for (int i = 0; i < total; i++)
+      body(i);
+    return;
+  }
+  std::vector<std::thread> threads;
+  threads.reserve(n);
+  int chunk = (total + n - 1) / n;
+  for (int t = 0; t < n; t++)
+  {
+    int start = t * chunk;
+    int end = std::min(start + chunk, total);
+    if (start >= end)
+      break;
+    threads.emplace_back([start, end, &body]() {
+      for (int i = start; i < end; i++)
+        body(i);
+    });
+  }
+  for (auto &th : threads)
+    th.join();
+}
+
 // Chaikin corner-cutting. The A* route is an 8-connected staircase; this
 // rounds it into a smooth curve while pinning the endpoints so networks stay
 // connected at the waypoints.
@@ -63,57 +103,61 @@ static std::vector<std::pair<float, float>> chaikin(
   return cur;
 }
 
-float TerrainBuilder::local_steepness(int x, int y) const
+// Refreshed after each blur pass: max neighbour height delta in world units.
+// A* and waypoint placement read this O(1) instead of recomputing 4 neighbour
+// lookups per query.
+void TerrainBuilder::compute_steepness()
 {
-  float b = buf[y * w + x];
-  float d = 0.0f;
-  if (x + 1 < w)
-    d = std::max(d, std::fabs(buf[y * w + x + 1] - b));
-  if (x > 0)
-    d = std::max(d, std::fabs(buf[y * w + x - 1] - b));
-  if (y + 1 < h)
-    d = std::max(d, std::fabs(buf[(y + 1) * w + x] - b));
-  if (y > 0)
-    d = std::max(d, std::fabs(buf[(y - 1) * w + x] - b));
-  return d * world_per_buf / world_per_texel;
+  steep.assign((size_t)w * h, 0.0f);
+  float scale = world_per_buf / world_per_texel;
+  parallel_rows(h, [&](int y) {
+    int row = y * w;
+    for (int x = 0; x < w; x++)
+    {
+      float b = buf[row + x];
+      float d = 0.0f;
+      if (x + 1 < w) d = std::max(d, std::fabs(buf[row + x + 1] - b));
+      if (x > 0)     d = std::max(d, std::fabs(buf[row + x - 1] - b));
+      if (y + 1 < h) d = std::max(d, std::fabs(buf[row + w + x] - b));
+      if (y > 0)     d = std::max(d, std::fabs(buf[row - w + x] - b));
+      steep[row + x] = d * scale;
+    }
+  });
 }
 
-void TerrainBuilder::box_blur_2x()
+// Separable two-pass 3x3 box blur (two passes -> ~5x5 Gaussian). Horizontal
+// then vertical = 3 reads + 1 write per pixel per axis (vs 9 reads for the
+// naive 2D kernel). Cache-friendly and parallel over rows.
+void TerrainBuilder::box_blur_2x_separable()
 {
-  // Two 3x3 box blur passes (~5x5 Gaussian) smooth DTL's integer step
-  // quantization — one pass isn't enough for dense maps with many octaves.
   std::vector<float> tmp(buf.size());
-  std::vector<float> *src = &buf;
-  std::vector<float> *dst = &tmp;
   for (int pass = 0; pass < 2; pass++)
   {
-    for (int y = 0; y < h; y++)
-    {
+    // Horizontal: buf -> tmp
+    parallel_rows(h, [&](int y) {
+      int row = y * w;
       for (int x = 0; x < w; x++)
       {
-        float sum = 0.0f;
-        int cnt = 0;
-        for (int dy = -1; dy <= 1; dy++)
-        {
-          int ny = y + dy;
-          if (ny < 0 || ny >= h)
-            continue;
-          for (int dx = -1; dx <= 1; dx++)
-          {
-            int nx = x + dx;
-            if (nx < 0 || nx >= w)
-              continue;
-            sum += (*src)[ny * w + nx];
-            cnt++;
-          }
-        }
-        (*dst)[y * w + x] = sum / (float)cnt;
+        float sum = buf[row + x];
+        int cnt = 1;
+        if (x > 0)     { sum += buf[row + x - 1]; cnt++; }
+        if (x + 1 < w) { sum += buf[row + x + 1]; cnt++; }
+        tmp[row + x] = sum / (float)cnt;
       }
-    }
-    std::swap(src, dst);
+    });
+    // Vertical: tmp -> buf
+    parallel_rows(h, [&](int y) {
+      int row = y * w;
+      for (int x = 0; x < w; x++)
+      {
+        float sum = tmp[row + x];
+        int cnt = 1;
+        if (y > 0)     { sum += tmp[row - w + x]; cnt++; }
+        if (y + 1 < h) { sum += tmp[row + w + x]; cnt++; }
+        buf[row + x] = sum / (float)cnt;
+      }
+    });
   }
-  if (src != &buf)
-    buf = *src;
 }
 
 // Full-resolution A*. Edge cost = world distance scaled up quadratically by
@@ -121,19 +165,21 @@ void TerrainBuilder::box_blur_2x()
 // the cap are impassable (the goal cell is always reachable so a waypoint on
 // rough ground still terminates). No coarse grid — at full res a cliff is
 // never hidden between samples.
+//
+// Uses a generation counter: each call bumps cur_gen, and visited_gen[i] ==
+// cur_gen tells us whether g_cost/came hold valid data for this run. This
+// avoids three full-buffer fills (≈12 MB for a 1000x1000 map) per A* call.
 std::vector<int> TerrainBuilder::astar(int sx, int sy, int gx, int gy)
 {
   float slope_weight = lerpf_(2.0f, 24.0f, hill_avoidance);
   float hard_cap = lerpf_(1.2f, 0.30f, hill_avoidance);
-  const int total = w * h;
   const int start = sy * w + sx;
   const int goal = gy * w + gx;
   const float diag = 1.41421356f;
 
   // Elevation-following term: penalize straying from the gentle straight
   // grade that connects the two endpoint heights. This makes the search
-  // route *around* a hill at the right contour instead of climbing over it
-  // (which is what produced the hump in the road).
+  // route *around* a hill at the right contour instead of climbing over it.
   float h0 = h_world(buf[start]);
   float h1 = h_world(buf[goal]);
   float route_span = std::sqrt((float)((sx - gx) * (sx - gx) + (sy - gy) * (sy - gy)));
@@ -149,14 +195,14 @@ std::vector<int> TerrainBuilder::astar(int sx, int sy, int gx, int gy)
   {
     float cap = (relax == 0) ? hard_cap : hard_cap * 2.5f;
 
-    std::fill(g_cost.begin(), g_cost.end(), std::numeric_limits<float>::infinity());
-    std::fill(came.begin(), came.end(), -1);
-    std::fill(closed.begin(), closed.end(), (uint8_t)0);
+    cur_gen++;
 
     using QN = std::pair<float, int>;
     std::priority_queue<QN, std::vector<QN>, std::greater<QN>> open;
 
     g_cost[start] = 0.0f;
+    came[start] = -1;
+    visited_gen[start] = cur_gen;
     float hx = (float)(sx - gx), hy = (float)(sy - gy);
     open.push({std::sqrt(hx * hx + hy * hy) * world_per_texel, start});
 
@@ -170,13 +216,13 @@ std::vector<int> TerrainBuilder::astar(int sx, int sy, int gx, int gy)
         found = true;
         break;
       }
-      if (closed[cur])
+      if (closed_gen[cur] == cur_gen)
         continue;
-      closed[cur] = 1;
+      closed_gen[cur] = cur_gen;
       int cx = cur % w;
       int cy = cur / w;
       float ha = h_world(buf[cur]);
-      float steep_cur = local_steepness(cx, cy);
+      float steep_cur = steep[cur];
       for (int k = 0; k < 8; k++)
       {
         int nx = cx + nx8[k];
@@ -184,18 +230,17 @@ std::vector<int> TerrainBuilder::astar(int sx, int sy, int gx, int gy)
         if (nx < 0 || nx >= w || ny < 0 || ny >= h)
           continue;
         int ni = ny * w + nx;
-        if (closed[ni])
+        if (closed_gen[ni] == cur_gen)
           continue;
         float dist = world_per_texel;
         if (nx8[k] != 0 && ny8[k] != 0)
           dist *= diag;
-        // Effective steepness = the worse of the along-track grade and the
-        // terrain's own steepest local face at either cell. The cross-slope
-        // term is what stops the route from sidehilling across a steep face
-        // (low along-track slope, but a tall cut/fill once carved flat) —
-        // i.e. it routes *around* the hill, not along its side.
+        // Effective steepness = worse of along-track grade and the terrain's
+        // own steepest local face at either cell. The cross-slope term is what
+        // stops the route from sidehilling across a steep face — i.e. it
+        // routes *around* the hill, not along its side.
         float along = std::fabs(h_world(buf[ni]) - ha) / dist;
-        float slope = std::max(along, std::max(steep_cur, local_steepness(nx, ny)));
+        float slope = std::max(along, std::max(steep_cur, steep[ni]));
         if (slope > cap && ni != goal)
           continue;
         float r = slope / cap;
@@ -205,10 +250,13 @@ std::vector<int> TerrainBuilder::astar(int sx, int sy, int gx, int gy)
         float dev = std::fabs(h_world(buf[ni]) - target_h) / elev_scale;
         float step = dist * (1.0f + slope_weight * r * r + elev_weight * dev * dev);
         float tentative = g_cost[cur] + step;
-        if (tentative < g_cost[ni])
+        float prior = (visited_gen[ni] == cur_gen) ? g_cost[ni]
+                                                    : std::numeric_limits<float>::infinity();
+        if (tentative < prior)
         {
           g_cost[ni] = tentative;
           came[ni] = cur;
+          visited_gen[ni] = cur_gen;
           float ex = (float)(nx - gx), ey = (float)(ny - gy);
           open.push({tentative + std::sqrt(ex * ex + ey * ey) * world_per_texel, ni});
         }
@@ -256,9 +304,7 @@ void TerrainBuilder::carve_route(const std::vector<std::pair<float, float>> &pol
       pts.push_back({poly[i].first + dx * t, poly[i].second + dy * t});
     }
   }
-  {
-    pts.push_back(poly.back());
-  }
+  pts.push_back(poly.back());
   if (pts.size() < 2)
     return;
 
@@ -279,13 +325,15 @@ void TerrainBuilder::carve_route(const std::vector<std::pair<float, float>> &pol
   }
   // Broad (low-pass) ground reference: the cut/fill cap follows the large-
   // scale terrain, not local noise, so the bed can never dive into a crater
-  // far below the land around it.
+  // far below the land around it. Scratch buffer is reused across iterations
+  // instead of reallocating a fresh vector inside the loop.
   std::vector<float> gsm = ground;
+  std::vector<float> scratch(gsm.size());
   for (int p = 0; p < 12; p++)
   {
-    std::vector<float> s = gsm;
+    std::memcpy(scratch.data(), gsm.data(), gsm.size() * sizeof(float));
     for (size_t i = 1; i + 1 < gsm.size(); i++)
-      gsm[i] = (s[i - 1] + 2.0f * s[i] + s[i + 1]) * 0.25f;
+      gsm[i] = (scratch[i - 1] + 2.0f * scratch[i] + scratch[i + 1]) * 0.25f;
   }
   // Hard cap on how far the bed may sit below / above the broad terrain. A
   // route that would need a deeper cut than this is A*'s problem to route
@@ -294,6 +342,7 @@ void TerrainBuilder::carve_route(const std::vector<std::pair<float, float>> &pol
   float max_dev = clampf_(amplitude * 0.12f, 3.0f, 18.0f);
   float ah = surf.front();
   float bh = surf.back();
+  scratch.resize(surf.size());
   for (int it = 0; it < 24; it++)
   {
     for (size_t i = 1; i < pts.size(); i++)
@@ -310,9 +359,9 @@ void TerrainBuilder::carve_route(const std::vector<std::pair<float, float>> &pol
       float md = max_grade * seg;
       surf[i] = clampf_(surf[i], surf[i + 1] - md, surf[i + 1] + md);
     }
-    std::vector<float> sm = surf;
+    std::memcpy(scratch.data(), surf.data(), surf.size() * sizeof(float));
     for (size_t i = 1; i + 1 < pts.size(); i++)
-      surf[i] = (sm[i - 1] + 2.0f * sm[i] + sm[i + 1]) * 0.25f;
+      surf[i] = (scratch[i - 1] + 2.0f * scratch[i] + scratch[i + 1]) * 0.25f;
     for (size_t i = 1; i + 1 < pts.size(); i++)
       surf[i] = clampf_(surf[i], gsm[i] - max_dev, gsm[i] + max_dev);
     surf.front() = ah;
@@ -320,11 +369,9 @@ void TerrainBuilder::carve_route(const std::vector<std::pair<float, float>> &pol
   }
 
   // Lateral embankment grade. Bounded well below vertical, so the terrain
-  // *always* ramps gently down to the road bed no matter how deep the cut —
-  // the wider the cut, the longer the ramp. There is deliberately no upper
-  // cap on the ramp length (the old hard cap is exactly what produced the
-  // near-vertical walls): a deep crossing just gets a correspondingly broad,
-  // smooth cutting/embankment instead of a cliff.
+  // *always* ramps gently down to the road bed no matter how deep the cut.
+  // A deep crossing just gets a correspondingly broad smooth cutting /
+  // embankment instead of a cliff.
   float lat_grade = clampf_(max_grade * 4.0f, 0.06f, 0.30f);
   float min_sh = std::max(width_world * 0.5f, 2.0f * world_per_texel);
   float max_scan = (float)std::min(w, h); // safety bound only
@@ -344,7 +391,7 @@ void TerrainBuilder::carve_route(const std::vector<std::pair<float, float>> &pol
     if (scan_r > max_scan)
       scan_r = max_scan;
     // The falloff must reach zero by the edge of whatever we actually scan,
-    // so a clamped scan can never leave a hard rim (the crater wall).
+    // so a clamped scan can never leave a hard rim.
     float fall = std::min(sh_len, (scan_r - wr) * world_per_texel);
     if (fall < min_sh)
       fall = min_sh;
@@ -418,12 +465,12 @@ void TerrainBuilder::build_network(std::mt19937 &rng, int node_count,
     if (buf[py * w + px] <= min_wp_buf)
       continue;
     float bar = (attempts < node_count * 120) ? flat_thresh : flat_thresh * 3.0f;
-    if (local_steepness(px, py) > bar)
+    if (steep[py * w + px] > bar)
       continue;
     bool ok = true;
     for (auto &p : wp)
     {
-      float sx = px - p.first, sy = py - p.second;
+      float sx = (float)(px - p.first), sy = (float)(py - p.second);
       if (std::sqrt(sx * sx + sy * sy) < min_sep)
       {
         ok = false;
@@ -454,7 +501,7 @@ void TerrainBuilder::build_network(std::mt19937 &rng, int node_count,
       {
         if (in_tree[b])
           continue;
-        float sx = wp[a].first - wp[b].first, sy = wp[a].second - wp[b].second;
+        float sx = (float)(wp[a].first - wp[b].first), sy = (float)(wp[a].second - wp[b].second);
         float d = std::sqrt(sx * sx + sy * sy);
         if (d < best)
         {
@@ -496,16 +543,19 @@ void TerrainBuilder::build_network(std::mt19937 &rng, int node_count,
   }
 }
 
-Dictionary TerrainBuilder::build(Array matrix, Dictionary cfg)
+Dictionary TerrainBuilder::build(Dictionary matrix, Dictionary cfg)
 {
   Dictionary out;
-  h = matrix.size();
-  if (h == 0)
+  if (!matrix.has("width") || !matrix.has("height") || !matrix.has("data"))
     return out;
-  Array first_row = matrix[0];
-  w = first_row.size();
-  if (w == 0)
+  w = (int)matrix["width"];
+  h = (int)matrix["height"];
+  if (w <= 0 || h <= 0)
     return out;
+  PackedByteArray data = matrix["data"];
+  if (data.size() < (int64_t)w * h)
+    return out;
+  const uint8_t *src = data.ptr();
 
   amplitude = cfg_f(cfg, "amplitude", 100.0f);
   sea_level = cfg_f(cfg, "sea_level", 0.0f);
@@ -516,16 +566,13 @@ Dictionary TerrainBuilder::build(Array matrix, Dictionary cfg)
 
   int lowest_i = 999999, highest_i = -999999;
   buf.assign((size_t)w * h, 0.0f);
-  for (int y = 0; y < h; y++)
+  // Single pass over the flat byte buffer — no Variant marshalling.
+  for (int i = 0, n = w * h; i < n; i++)
   {
-    Array row = matrix[y];
-    for (int x = 0; x < w; x++)
-    {
-      int cell = (int)row[x];
-      buf[y * w + x] = (float)cell;
-      lowest_i = std::min(lowest_i, cell);
-      highest_i = std::max(highest_i, cell);
-    }
+    int cell = (int)src[i];
+    buf[i] = (float)cell;
+    if (cell < lowest_i) lowest_i = cell;
+    if (cell > highest_i) highest_i = cell;
   }
   lowest = (float)lowest_i;
   range = (float)(highest_i - lowest_i);
@@ -534,7 +581,8 @@ Dictionary TerrainBuilder::build(Array matrix, Dictionary cfg)
   world_per_texel = terrain_size / (float)w;
   world_per_buf = amplitude / range;
 
-  box_blur_2x();
+  box_blur_2x_separable();
+  compute_steepness();
 
   mask.assign((size_t)w * h * 2, 0.0f);
 
@@ -544,9 +592,14 @@ Dictionary TerrainBuilder::build(Array matrix, Dictionary cfg)
     acc_h.assign((size_t)w * h, 0.0f);
     acc_w.assign((size_t)w * h, 0.0f);
     max_infl.assign((size_t)w * h, 0.0f);
+    // A* scratch — sized once. visited_gen / closed_gen are bumped per call
+    // (cur_gen), no fill needed; g_cost / came are read only when the gen
+    // matches, so their initial garbage is fine.
     g_cost.assign((size_t)w * h, 0.0f);
     came.assign((size_t)w * h, -1);
-    closed.assign((size_t)w * h, 0);
+    visited_gen.assign((size_t)w * h, 0);
+    closed_gen.assign((size_t)w * h, 0);
+    cur_gen = 0;
 
     unsigned int seed = (unsigned int)cfg_i(cfg, "seed", 0);
     std::mt19937 rng(seed);
@@ -560,87 +613,127 @@ Dictionary TerrainBuilder::build(Array matrix, Dictionary cfg)
                     clampf_(cfg_f(cfg, "road_max_grade", 0.08f), 0.01f, 1.0f), 1);
 
     // Composite all routes at once: weighted-average bed height, lerped
-    // against the natural terrain by the strongest influence. Overlapping
-    // passes and path/road crossings blend here instead of last-writer-wins.
+    // against the natural terrain by the strongest influence. Parallelized
+    // over rows since each texel writes only to itself.
     float sea_buf = world_to_buf(sea_level);
-    for (int idx = 0; idx < w * h; idx++)
-    {
-      if (acc_w[idx] <= 0.0f)
-        continue;
-      if (orig[idx] <= sea_buf) // only ever touch land
-        continue;
-      float blended = acc_h[idx] / acc_w[idx];
-      float infl = clampf_(max_infl[idx], 0.0f, 1.0f);
-      float ow = h_world(orig[idx]);
-      buf[idx] = world_to_buf(lerpf_(ow, blended, infl));
-    }
+    parallel_rows(h, [&](int y) {
+      int row = y * w;
+      for (int x = 0; x < w; x++)
+      {
+        int idx = row + x;
+        if (acc_w[idx] <= 0.0f)
+          continue;
+        if (orig[idx] <= sea_buf)
+          continue;
+        float blended = acc_h[idx] / acc_w[idx];
+        float infl = clampf_(max_infl[idx], 0.0f, 1.0f);
+        float ow = h_world(orig[idx]);
+        buf[idx] = world_to_buf(lerpf_(ow, blended, infl));
+      }
+    });
 
     // Relax the carved band so any residual seam — notably where two routes
     // at different bed heights cross — is smoothed out. Fully-flat beds
     // (infl≈1) and untouched terrain (infl≈0) are pinned so roads stay flat
     // and the natural landscape is left alone; only the transition skirt and
-    // crossings move.
+    // crossings move. Reuses one scratch buffer instead of allocating per
+    // pass; parallelized over rows.
+    std::vector<float> relax_scratch(buf.size());
     for (int pass = 0; pass < 3; pass++)
     {
-      std::vector<float> src = buf;
-      for (int y = 0; y < h; y++)
-      {
+      std::memcpy(relax_scratch.data(), buf.data(), buf.size() * sizeof(float));
+      parallel_rows(h, [&](int y) {
+        int row = y * w;
         for (int x = 0; x < w; x++)
         {
-          int idx = y * w + x;
+          int idx = row + x;
           float mi = max_infl[idx];
           if (mi <= 0.001f || mi >= 0.999f)
             continue;
           float sum = 0.0f;
           int cnt = 0;
-          if (x > 0) { sum += src[idx - 1]; cnt++; }
-          if (x + 1 < w) { sum += src[idx + 1]; cnt++; }
-          if (y > 0) { sum += src[idx - w]; cnt++; }
-          if (y + 1 < h) { sum += src[idx + w]; cnt++; }
+          if (x > 0)     { sum += relax_scratch[idx - 1]; cnt++; }
+          if (x + 1 < w) { sum += relax_scratch[idx + 1]; cnt++; }
+          if (y > 0)     { sum += relax_scratch[idx - w]; cnt++; }
+          if (y + 1 < h) { sum += relax_scratch[idx + w]; cnt++; }
           if (cnt == 0)
             continue;
-          buf[idx] = lerpf_(src[idx], sum / (float)cnt, 0.5f);
+          buf[idx] = lerpf_(relax_scratch[idx], sum / (float)cnt, 0.5f);
         }
-      }
+      });
     }
   }
 
-  Ref<Image> himg = Image::create_empty(w, h, false, Image::FORMAT_RF);
-  for (int y = 0; y < h; y++)
-    for (int x = 0; x < w; x++)
-      himg->set_pixel(x, y, Color((buf[y * w + x] - lowest) / range, 0.0f, 0.0f));
+  // Cache the center-height before we hand `buf` away. Used by DrawMatrix3D
+  // to seed an initial camera focus / debug readout.
+  float center_height = 0.0f;
+  {
+    int cx = w / 2;
+    int cy = h / 2;
+    center_height = (buf[cy * w + cx] - lowest) / range * amplitude;
+  }
+  out["center_height"] = center_height;
+
+  // Pack normalized heights into a flat float buffer and create the Image from
+  // raw bytes — Image::set_pixel goes through the Variant call layer per pixel,
+  // which dominates at 1M+ pixels. Parallelized over rows.
+  PackedByteArray height_bytes;
+  height_bytes.resize((int64_t)w * h * (int64_t)sizeof(float));
+  {
+    float *dst = reinterpret_cast<float *>(height_bytes.ptrw());
+    float inv_range = 1.0f / range;
+    parallel_rows(h, [&](int y) {
+      int row = y * w;
+      for (int x = 0; x < w; x++)
+        dst[row + x] = (buf[row + x] - lowest) * inv_range;
+    });
+  }
+  Ref<Image> himg = Image::create_from_data(w, h, false, Image::FORMAT_RF, height_bytes);
   himg->generate_mipmaps();
 
-  Ref<Image> mimg = Image::create_empty(w, h, false, Image::FORMAT_RGF);
-  for (int y = 0; y < h; y++)
-    for (int x = 0; x < w; x++)
-    {
-      int i = (y * w + x) * 2;
-      mimg->set_pixel(x, y, Color(mask[i], mask[i + 1], 0.0f));
-    }
-  mimg->generate_mipmaps();
+  // Mask is two floats per pixel (R=path, G=road). It's a paint mask consumed
+  // at one mip level, so skip mipmap generation — saves time at large sizes
+  // and the shader doesn't sample mips of it.
+  PackedByteArray mask_bytes;
+  mask_bytes.resize((int64_t)w * h * 2 * (int64_t)sizeof(float));
+  {
+    float *dst = reinterpret_cast<float *>(mask_bytes.ptrw());
+    parallel_rows(h, [&](int y) {
+      int row = y * w;
+      for (int x = 0; x < w; x++)
+      {
+        int i = (row + x) * 2;
+        dst[i] = mask[i];
+        dst[i + 1] = mask[i + 1];
+      }
+    });
+  }
+  Ref<Image> mimg = Image::create_from_data(w, h, false, Image::FORMAT_RGF, mask_bytes);
 
   out["height"] = ImageTexture::create_from_image(himg);
   out["mask"] = ImageTexture::create_from_image(mimg);
 
+  // Hand the carved height buffer back so TerrainLOD's collider sampling and
+  // anything else that needs raw heights can read from a plain
+  // PackedFloat32Array instead of paying the Image::get_pixel cost.
+  PackedFloat32Array heights_packed;
+  heights_packed.resize(w * h);
+  std::memcpy(heights_packed.ptrw(), buf.data(), buf.size() * sizeof(float));
+  out["heights"] = heights_packed;
+  out["lowest"] = lowest;
+  out["range"] = range;
+
   // Free the big scratch buffers; the textures are what callers keep.
-  buf.clear();
-  buf.shrink_to_fit();
-  orig.clear();
-  orig.shrink_to_fit();
-  mask.clear();
-  mask.shrink_to_fit();
-  acc_h.clear();
-  acc_h.shrink_to_fit();
-  acc_w.clear();
-  acc_w.shrink_to_fit();
-  max_infl.clear();
-  max_infl.shrink_to_fit();
-  g_cost.clear();
-  g_cost.shrink_to_fit();
-  came.clear();
-  came.shrink_to_fit();
-  closed.clear();
-  closed.shrink_to_fit();
+  buf.clear(); buf.shrink_to_fit();
+  orig.clear(); orig.shrink_to_fit();
+  mask.clear(); mask.shrink_to_fit();
+  steep.clear(); steep.shrink_to_fit();
+  acc_h.clear(); acc_h.shrink_to_fit();
+  acc_w.clear(); acc_w.shrink_to_fit();
+  max_infl.clear(); max_infl.shrink_to_fit();
+  g_cost.clear(); g_cost.shrink_to_fit();
+  came.clear(); came.shrink_to_fit();
+  visited_gen.clear(); visited_gen.shrink_to_fit();
+  closed_gen.clear(); closed_gen.shrink_to_fit();
   return out;
 }

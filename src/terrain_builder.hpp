@@ -14,12 +14,17 @@
 namespace godot
 {
   // Owns the whole heightmap pipeline so there is one source of truth:
-  // DTL matrix -> box blur -> seeded path/road networks (full-resolution A*
-  // around steep terrain) -> grade-limited carve with slope-limited shoulders
-  // -> normalized RF height texture + RG path/road mask texture.
+  // DTL matrix -> separable box blur -> seeded path/road networks
+  // (full-resolution A* around steep terrain) -> grade-limited carve with
+  // slope-limited shoulders -> normalized RF height texture + RG path/road
+  // mask texture.
   //
   // DrawMatrix3D just holds the inspector config and calls build(); TerrainLOD
   // and the water plane consume the textures DrawMatrix3D exposes.
+  //
+  // Matrix input is a Dictionary { width: int, height: int, data: PackedByteArray }
+  // produced by DTL. Flat-byte form avoids the per-cell Variant marshalling that
+  // an Array<Array<int>> form pays at 1000x1000+.
   class TerrainBuilder : public RefCounted
   {
     GDCLASS(TerrainBuilder, RefCounted);
@@ -36,7 +41,7 @@ namespace godot
     // road_node_count, path_width, road_width, path_max_grade,
     // road_max_grade, hill_avoidance.
     // Returns { "height": ImageTexture, "mask": ImageTexture }.
-    Dictionary build(Array matrix, Dictionary cfg);
+    Dictionary build(Dictionary matrix, Dictionary cfg);
 
   private:
     int w = 0;
@@ -53,6 +58,7 @@ namespace godot
     std::vector<float> buf;  // working heights (DTL units), carved in place
     std::vector<float> orig; // natural reference for shoulder fillets
     std::vector<float> mask; // w*h*2, R = path, G = road
+    std::vector<float> steep; // cached per-cell steepness (refreshed after blur)
 
     // Carve accumulation (build-scoped). Every route blends into these; then
     // build() composites them onto buf in one pass and relaxes the result, so
@@ -62,16 +68,20 @@ namespace godot
     std::vector<float> acc_w;    // sum(weight)
     std::vector<float> max_infl; // strongest road influence (0..1) per texel
 
-    // A* scratch, allocated once and reused per edge.
+    // A* scratch, allocated once and reused per edge. visited_gen/closed_gen
+    // are bumped per A* relax pass (cur_gen) so we never have to fill them —
+    // a cell's g_cost/came are valid only when visited_gen[i] == cur_gen.
     std::vector<float> g_cost;
     std::vector<int32_t> came;
-    std::vector<uint8_t> closed;
+    std::vector<int32_t> visited_gen;
+    std::vector<int32_t> closed_gen;
+    int32_t cur_gen = 0;
 
     inline float h_world(float b) const { return (b - lowest) / range * amplitude; }
     inline float world_to_buf(float wh) const { return lowest + wh / (amplitude > 1e-4f ? amplitude : 1e-4f) * range; }
-    float local_steepness(int x, int y) const;
 
-    void box_blur_2x();
+    void compute_steepness();
+    void box_blur_2x_separable();
     void build_network(std::mt19937 &rng, int node_count, float width_world,
                         float max_grade, int mask_channel);
     std::vector<int> astar(int sx, int sy, int gx, int gy);

@@ -4,78 +4,68 @@ class_name DrawRuins3D extends GridMap
 @export var horizontal_orientation: int = 16: set = _set_horizontal_orientation
 @export var wall_movement: int = 50: set = _set_wall_movement
 
-var _matrix
+var _matrix: Dictionary = {}
 
 func _set_horizontal_orientation(new_value: int):
 	horizontal_orientation = new_value
-	if _matrix:
+	if not _matrix.is_empty():
 		draw_ruins(_matrix)
-		
+
 func _set_wall_movement(new_value: int):
 	wall_movement = new_value
-	if _matrix:
+	if not _matrix.is_empty():
 		draw_ruins(_matrix)
 
 func get_item_id(name: String):
 	return mesh_library.find_item_by_name(name)
 
-func get_surrounding_cells(matrix: Array, x: int, y: int) -> Array:
-	var height: int = matrix.size()
-	var width: int = matrix[0].size()
-	var cells = []
-	
-	# Loop through all offsets in a 3x3 grid around (x, y), skipping (0, 0)
+# `data` is the PackedByteArray from the DTL matrix dict; `width`/`height` are
+# the matrix dims. Inline indexing means we don't pass the whole dict around.
+func get_surrounding_cells(data: PackedByteArray, width: int, height: int, x: int, y: int) -> Array:
+	var cells: Array = []
 	for dy in range(-1, 2):
 		for dx in range(-1, 2):
-			# Skip the center cell
 			if dx == 0 and dy == 0:
 				continue
-				
-			var nx = x + dx
-			var ny = y + dy
-			
-			# Check boundaries
+			var nx := x + dx
+			var ny := y + dy
 			if nx >= 0 and nx < width and ny >= 0 and ny < height:
-				cells.append(matrix[ny][nx])
-	
+				cells.append(data[ny * width + nx])
 	return cells
 
-func get_orthogonal_surrounding_cells(matrix: Array, x: int, y: int):
-	var height: int = matrix.size()
-	var width: int = matrix[0].size()
-	var cells = []
-
+func get_orthogonal_surrounding_cells(data: PackedByteArray, width: int, height: int, x: int, y: int):
+	var cells: Array = []
 	# Up
 	if y - 1 >= 0:
-		cells.append(matrix[y - 1][x])
-
+		cells.append(data[(y - 1) * width + x])
 	# Right
 	if x + 1 < width:
-		cells.append(matrix[y][x + 1])
-
+		cells.append(data[y * width + (x + 1)])
 	# Down
 	if y + 1 < height:
-		cells.append(matrix[y + 1][x])
-
+		cells.append(data[(y + 1) * width + x])
 	# Left
 	if x - 1 >= 0:
-		cells.append(matrix[y][x - 1])
-
+		cells.append(data[y * width + (x - 1)])
 	return cells
 
-func draw_ruins(matrix: Array):
+func draw_ruins(matrix: Dictionary):
 	_matrix = matrix
-	var height: int = matrix.size()
-	var width: int = matrix[0].size()
+	var width: int = matrix.get("width", 0)
+	var height: int = matrix.get("height", 0)
+	var data: PackedByteArray = matrix.get("data", PackedByteArray())
+	if width <= 0 or height <= 0 or data.is_empty():
+		return
+
 	var item_names = ["", "Wall", "Floor_Squares", "Arch_Gothic", "Floor_Diamond", "Column_Round_Short"]
 	var item_ids = item_names.map(get_item_id)
-	
+
 	clear()
-	
-	# Assign colors based on the matrix data
+
 	for y in range(height):
+		var row_off := y * width
 		for x in range(width):
-			var cell: int = matrix[y][x]
+			var cell: int = data[row_off + x]
 			if cell < item_names.size() and cell > 0:
 				var type_id = item_ids[cell]
 				var type_name = item_names[cell]
@@ -83,17 +73,17 @@ func draw_ruins(matrix: Array):
 				var new_x = x * 100
 				var new_y = y * 100
 				if type_name == "Arch_Gothic":
-					var surrounding_cells = get_orthogonal_surrounding_cells(matrix, x, y)
+					var surrounding_cells = get_orthogonal_surrounding_cells(data, width, height, x, y)
 					for i in range(surrounding_cells.size()):
 						var surrounding_item_name = item_names[surrounding_cells[i]]
 						if ["Floor_Squares", "Floor_Diamond"].has(surrounding_item_name):
 							if i == 1 or i == 3:
 								orientation = horizontal_orientation
 								break
-				
+
 				if ["Floor_Squares", "Floor_Diamond"].has(type_name):
 					# Place walls
-					var orthogonal_surrounding_cells = get_orthogonal_surrounding_cells(matrix, x, y)
+					var orthogonal_surrounding_cells = get_orthogonal_surrounding_cells(data, width, height, x, y)
 					for i in range(orthogonal_surrounding_cells.size()):
 						if orthogonal_surrounding_cells[i] == 1:
 							if i == 0:
@@ -104,11 +94,11 @@ func draw_ruins(matrix: Array):
 								set_cell_item(Vector3i(new_x, 0, new_y + wall_movement), item_ids[1], orientation)
 							if i == 3:
 								set_cell_item(Vector3i(new_x - wall_movement, 0, new_y), item_ids[1], horizontal_orientation)
-								
+
 				if type_name == "Floor_Diamond":
-					var surrounding_cells = get_surrounding_cells(matrix, x, y)
-	
-					# -- Place columns in corners if the corner is a Wall (1) 
+					var surrounding_cells = get_surrounding_cells(data, width, height, x, y)
+
+					# -- Place columns in corners if the corner is a Wall (1)
 					#    and the two adjacent orth cells around that corner are Floors (2 or 4).
 					# -- Make sure we actually got all 8 neighbors (surrounding_cells.size() == 8).
 					if surrounding_cells.size() == 8:
@@ -118,28 +108,28 @@ func draw_ruins(matrix: Array):
 						and surrounding_cells[3] in [2, 4]:
 							set_cell_item(Vector3i(new_x - wall_movement, 0, new_y - wall_movement),
 								item_ids[5], orientation)
-						
+
 						# Top-right corner: index 2 is top-right, index 1 is top, index 4 is right
 						if surrounding_cells[2] == 1 \
 						and surrounding_cells[1] in [2, 4] \
 						and surrounding_cells[4] in [2, 4]:
 							set_cell_item(Vector3i(new_x + wall_movement, 0, new_y - wall_movement),
 								item_ids[5], orientation)
-						
+
 						# Bottom-left corner: index 5 is bottom-left, index 3 is left, index 6 is bottom
 						if surrounding_cells[5] == 1 \
 						and surrounding_cells[3] in [2, 4] \
 						and surrounding_cells[6] in [2, 4]:
 							set_cell_item(Vector3i(new_x - wall_movement, 0, new_y + wall_movement),
 								item_ids[5], orientation)
-						
+
 						# Bottom-right corner: index 7 is bottom-right, index 4 is right, index 6 is bottom
 						if surrounding_cells[7] == 1 \
 						and surrounding_cells[4] in [2, 4] \
 						and surrounding_cells[6] in [2, 4]:
 							set_cell_item(Vector3i(new_x + wall_movement, 0, new_y + wall_movement),
 								item_ids[5], orientation)
-								
+
 				if type_name == "Arch_Gothic":
 					set_cell_item(Vector3i(new_x, -1, new_y), item_ids[2], 0)
 					var doorway_wall_movement = wall_movement
@@ -151,8 +141,8 @@ func draw_ruins(matrix: Array):
 						set_cell_item(Vector3i(new_x - 5, 0, new_y), type_id, orientation)
 						set_cell_item(Vector3i(new_x - doorway_wall_movement, 0, new_y), item_ids[1], horizontal_orientation)
 						set_cell_item(Vector3i(new_x + doorway_wall_movement, 0, new_y), item_ids[1], horizontal_orientation)
-						
-					var surrounding_cells = get_surrounding_cells(matrix, x, y)
+
+					var surrounding_cells = get_surrounding_cells(data, width, height, x, y)
 					if surrounding_cells[0] in [2, 4]:
 						set_cell_item(Vector3i(new_x - wall_movement - 8, 0, new_y - wall_movement - 8), item_ids[5], orientation)
 					if surrounding_cells[2] in [2, 4]:
@@ -162,10 +152,8 @@ func draw_ruins(matrix: Array):
 					if surrounding_cells[7] in [2, 4]:
 						set_cell_item(Vector3i(new_x + wall_movement, 0, new_y + wall_movement), item_ids[5], orientation)
 					continue
-					
+
 				if type_name == "Wall":
 					continue
-					
+
 				set_cell_item(Vector3i(new_x, 0, new_y), type_id, orientation)
-				
-	

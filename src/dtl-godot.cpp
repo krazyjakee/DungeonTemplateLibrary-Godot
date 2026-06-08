@@ -2,6 +2,7 @@
 #include <DTL.hpp>
 #include <godot_cpp/classes/ref.hpp>
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/packed_byte_array.hpp>
 
 using namespace godot;
 
@@ -37,24 +38,37 @@ void DTL::_bind_methods()
 
 int _seed = 0;
 
-Array MatrixToGodotArray(const std::vector<std::vector<uint_fast8_t>> &matrix)
+// Flatten DTL's vector-of-vectors output to a Dictionary holding the dims
+// plus a single PackedByteArray. This replaces the old Array-of-Array-of-int
+// form: at 1000x1000 the previous form allocated ~1M Variant ints inside 1000
+// sub-Arrays — the new form is one contiguous byte copy, and consumers index
+// it as `data[y * width + x]` with no per-cell Variant overhead. Cell values
+// are uint8 already (DTL uses uint_fast8_t throughout).
+Dictionary MatrixToPackedDict(const std::vector<std::vector<uint_fast8_t>> &matrix)
 {
-    Array result;
-    result.resize(matrix.size());
-    for (int y = 0; y < matrix.size(); ++y)
+    Dictionary result;
+    int h = (int)matrix.size();
+    int w = h > 0 ? (int)matrix[0].size() : 0;
+    PackedByteArray data;
+    data.resize((int64_t)w * h);
+    if (w > 0 && h > 0)
     {
-        Array row;
-        row.resize(matrix[y].size());
-        for (int x = 0; x < matrix[y].size(); ++x)
+        uint8_t *dst = data.ptrw();
+        for (int y = 0; y < h; y++)
         {
-            row[x] = (int)matrix[y][x];
+            const uint_fast8_t *src = matrix[y].data();
+            uint8_t *row_dst = dst + (size_t)y * w;
+            for (int x = 0; x < w; x++)
+                row_dst[x] = (uint8_t)src[x];
         }
-        result[y] = row;
     }
+    result["width"] = w;
+    result["height"] = h;
+    result["data"] = data;
     return result;
 }
 
-Array DTL::CellularAutomatonMixIsland(int width, int height, int iterations, int land_values)
+Dictionary DTL::CellularAutomatonMixIsland(int width, int height, int iterations, int land_values)
 {
     // Create a 2D structure compatible with DTL
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
@@ -122,108 +136,108 @@ Array DTL::CellularAutomatonMixIsland(int width, int height, int iterations, int
         break;
     }
 
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::CellularAutomatonIsland(int width, int height, int iterations, float probability)
+Dictionary DTL::CellularAutomatonIsland(int width, int height, int iterations, float probability)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::CellularAutomatonIsland(1, 0, iterations, probability).draw(matrix);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::FractalLoopIsland(int width, int height, int min_value, int altitude, int add_altitude)
+Dictionary DTL::FractalLoopIsland(int width, int height, int min_value, int altitude, int add_altitude)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::FractalLoopIsland<uint_fast8_t>(min_value, altitude, add_altitude).draw(matrix);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::FractalIsland(int width, int height, int min_value, int altitude, int add_altitude)
+Dictionary DTL::FractalIsland(int width, int height, int min_value, int altitude, int add_altitude)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::FractalIsland<uint_fast8_t>(min_value, altitude, add_altitude).draw(matrix);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::DiamondSquareAverageIsland(int width, int height, int min_value, int altitude, int add_altitude)
+Dictionary DTL::DiamondSquareAverageIsland(int width, int height, int min_value, int altitude, int add_altitude)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::DiamondSquareAverageIsland<uint_fast8_t>(min_value, altitude, add_altitude).draw(matrix);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::DiamondSquareAverageCornerIsland(int width, int height, int min_value, int altitude, int add_altitude)
+Dictionary DTL::DiamondSquareAverageCornerIsland(int width, int height, int min_value, int altitude, int add_altitude)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::DiamondSquareAverageCornerIsland<uint_fast8_t>(min_value, altitude, add_altitude).draw(matrix);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::SimpleVoronoiIsland(int width, int height, float voronoi_num, float probability)
+Dictionary DTL::SimpleVoronoiIsland(int width, int height, float voronoi_num, float probability)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::SimpleVoronoiIsland<uint_fast8_t>(voronoi_num, probability, 1, 0).draw(matrix);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::PerlinIsland(int width, int height, float frequency, int octaves, int max_height, int min_height)
+Dictionary DTL::PerlinIsland(int width, int height, float frequency, int octaves, int max_height, int min_height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::PerlinIsland<uint_fast8_t>(frequency, octaves, max_height, min_height).drawSEED(matrix, _seed);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::PerlinLoopIsland(int width, int height, float frequency, int octaves, int max_height, int min_height)
+Dictionary DTL::PerlinLoopIsland(int width, int height, float frequency, int octaves, int max_height, int min_height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::PerlinLoopIsland<uint_fast8_t>(frequency, octaves, max_height, min_height).drawSEED(matrix, _seed);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::PerlinSolitaryIsland(int width, int height, float truncated_proportion_, float mountain_proportion_, float frequency, int octaves, int max_height, int min_height)
+Dictionary DTL::PerlinSolitaryIsland(int width, int height, float truncated_proportion_, float mountain_proportion_, float frequency, int octaves, int max_height, int min_height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::PerlinSolitaryIsland<uint_fast8_t>(truncated_proportion_, mountain_proportion_, frequency, octaves, max_height, min_height).drawSEED(matrix, _seed);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::RogueLike(int width, int height, int max_ways, int min_room_width, int max_room_width, int min_room_height, int max_room_height, int min_way_horizontal, int max_way_horizontal, int min_way_vertical, int max_way_vertical)
+Dictionary DTL::RogueLike(int width, int height, int max_ways, int min_room_width, int max_room_width, int min_room_height, int max_room_height, int min_way_horizontal, int max_way_horizontal, int min_way_vertical, int max_way_vertical)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::RogueLike<uint_fast8_t>(0, 1, 2, 3, 4, max_ways,
                                         dtl::base::MatrixRange(min_room_width, min_room_height, max_room_width, max_room_height),
                                         dtl::base::MatrixRange(min_way_horizontal, min_way_vertical, max_way_horizontal, max_way_vertical))
         .drawSEED(matrix, _seed);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::SimpleRogueLike(int width, int height, int division_min, int division_max, int room_min_x, int room_max_x, int room_min_y, int room_max_y)
+Dictionary DTL::SimpleRogueLike(int width, int height, int division_min, int division_max, int room_min_x, int room_max_x, int room_min_y, int room_max_y)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::SimpleRogueLike<uint_fast8_t>(1, 2, division_min, division_max, room_min_x, room_max_x, room_min_y, room_max_y).drawSEED(matrix, _seed);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::MazeDig(int width, int height)
+Dictionary DTL::MazeDig(int width, int height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::MazeDig<uint_fast8_t, dtl::random::DefaultRandom>(1, 0).drawSEED(matrix, _seed);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::MazeBar(int width, int height)
+Dictionary DTL::MazeBar(int width, int height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::MazeBar<uint_fast8_t>(0, 1).drawSEED(matrix, _seed);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
-Array DTL::ClusteringMaze(int width, int height)
+Dictionary DTL::ClusteringMaze(int width, int height)
 {
     std::vector<std::vector<uint_fast8_t>> matrix(height, std::vector<uint_fast8_t>(width, 0));
     dtl::shape::ClusteringMaze<uint_fast8_t>(1).drawSEED(matrix, _seed);
-    return MatrixToGodotArray(matrix);
+    return MatrixToPackedDict(matrix);
 }
 
 void DTL::SetSeed(int seed)

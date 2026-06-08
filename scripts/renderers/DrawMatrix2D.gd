@@ -10,83 +10,96 @@ var default_colors: Array[Color] = [
 	Color.DARK_OLIVE_GREEN
 ]
 
-func draw_matrix_texture(matrix: Array, colors: Array[Color] = default_colors):
-	var height: int = matrix.size()
-	var width: int = matrix[0].size()
-	
-	# Create an Image to store the pixel data
-	var image: Image = Image.create_empty(width, height, false, Image.FORMAT_RGB8)
-	
-	# Assign colors based on the matrix data
+# `matrix` is the Dictionary {width, height, data: PackedByteArray} produced
+# by DTL. PackedByteArray indexing in GDScript is ~30× faster per cell than
+# the previous Array-of-Array-of-int form at 1000×1000.
+func draw_matrix_texture(matrix: Dictionary, colors: Array[Color] = default_colors):
+	var width: int = matrix.get("width", 0)
+	var height: int = matrix.get("height", 0)
+	var data: PackedByteArray = matrix.get("data", PackedByteArray())
+	if width <= 0 or height <= 0 or data.is_empty():
+		return null
+
+	# Build raw RGB8 bytes and create the Image in one shot — Image.set_pixel
+	# goes through the Variant call layer per pixel, which dominates above a
+	# few hundred thousand cells.
+	var bytes := PackedByteArray()
+	bytes.resize(width * height * 3)
+	var color_count: int = colors.size()
+	var fallback := Color.HOT_PINK
 	for y in range(height):
+		var row_off := y * width
+		var byte_off := row_off * 3
 		for x in range(width):
-			var cell: int = matrix[y][x]
-			var color: Color = Color.HOT_PINK
-			if cell < colors.size():
-				color = colors[cell]
+			var cell: int = data[row_off + x]
+			var color: Color = colors[cell] if cell < color_count else fallback
+			bytes[byte_off + x * 3 + 0] = int(color.r * 255.0)
+			bytes[byte_off + x * 3 + 1] = int(color.g * 255.0)
+			bytes[byte_off + x * 3 + 2] = int(color.b * 255.0)
 
-			image.set_pixel(x, y, color)
-	
-	# Convert the Image to a texture
-	var texture := ImageTexture.create_from_image(image)
-	return texture
+	var image: Image = Image.create_from_data(width, height, false, Image.FORMAT_RGB8, bytes)
+	return ImageTexture.create_from_image(image)
 
-func draw_matrix(matrix: Array, colors: Array[Color] = default_colors, texture_scale: float = 1.0):
+func draw_matrix(matrix: Dictionary, colors: Array[Color] = default_colors, texture_scale: float = 1.0):
 	for child in get_children():
 		child.queue_free()
-	
-	var height: int = matrix.size()
-	var width: int = matrix[0].size()
-	
+
+	var width: int = matrix.get("width", 0)
+	var height: int = matrix.get("height", 0)
+
 	var texture: ImageTexture = draw_matrix_texture(matrix, colors)
-	
-	# Create a Sprite2D to display the texture
+	if texture == null:
+		return
+
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
 	sprite.scale = Vector2(texture_scale, texture_scale)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.position = Vector2(width / 2, height / 2) * texture_scale
-	
-	# Add the sprite as a child of this node so it can be displayed
 	add_child(sprite)
 
-func draw_heightmap(matrix: Array):
+func draw_heightmap(matrix: Dictionary):
 	for child in get_children():
 		child.queue_free()
-		
-	var height: int = matrix.size()
-	var width: int = matrix[0].size()
-	
-	# Create an Image to store the pixel data
-	var image: Image = Image.create_empty(width, height, false, Image.FORMAT_RGB8)
-	
+
+	var width: int = matrix.get("width", 0)
+	var height: int = matrix.get("height", 0)
+	var data: PackedByteArray = matrix.get("data", PackedByteArray())
+	if width <= 0 or height <= 0 or data.is_empty():
+		return
+
 	var highest_value: int = -9999
 	var lowest_value: int = 9999
-	
+
+	for i in range(data.size()):
+		var cell: int = data[i]
+		if cell < lowest_value:
+			lowest_value = cell
+		if cell > highest_value:
+			highest_value = cell
+
+	var span: float = float(highest_value - lowest_value)
+	if span <= 0.0:
+		span = 1.0
+
+	# Raw RGB8 byte pack — same value in R/G/B for a grayscale heightmap.
+	var bytes := PackedByteArray()
+	bytes.resize(width * height * 3)
 	for y in range(height):
+		var row_off := y * width
+		var byte_off := row_off * 3
 		for x in range(width):
-			var cell: int = matrix[y][x]
-			if cell < lowest_value:
-				lowest_value = cell
-			if cell > highest_value:
-				highest_value = cell
-			
-	# Assign colors based on the matrix data
-	for y in range(height):
-		for x in range(width):
-			var cell: int = matrix[y][x]
-			var normalized_value: float = float(cell - lowest_value) / float(highest_value - lowest_value)
-			var color = Color(normalized_value, normalized_value, normalized_value)
-			image.set_pixel(x, y, color)
-	
-	# Convert the Image to a texture
+			var cell: int = data[row_off + x]
+			var v: int = int(float(cell - lowest_value) / span * 255.0)
+			bytes[byte_off + x * 3 + 0] = v
+			bytes[byte_off + x * 3 + 1] = v
+			bytes[byte_off + x * 3 + 2] = v
+
+	var image: Image = Image.create_from_data(width, height, false, Image.FORMAT_RGB8, bytes)
 	var texture := ImageTexture.create_from_image(image)
-	
-	# Create a Sprite2D to display the texture
+
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.position = Vector2(width / 2, height / 2)
-	
-	# Add the sprite as a child of this node so it can be displayed
 	add_child(sprite)

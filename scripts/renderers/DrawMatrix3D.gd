@@ -69,6 +69,11 @@ var water_shader: Shader = load("res://assets/shaders/water.gdshader")
 var height_image: Image
 var height_texture: ImageTexture
 var path_mask_texture: ImageTexture
+# Raw 0..1 height samples, same dims as height_texture. TerrainLOD samples
+# these for collider building so it never has to pay Image::get_pixel().
+var heights_packed: PackedFloat32Array
+var heights_width: int = 0
+var heights_height: int = 0
 
 var default_colors: Array[Color] = [
 	Color.DARK_BLUE,
@@ -81,7 +86,9 @@ var default_colors: Array[Color] = [
 
 # Cached so a Paths & Roads tweak in the editor can regenerate without the
 # parent terrain script re-running the (expensive) DTL pass when possible.
-var _last_matrix: Array = []
+# Matrix format is the Dictionary {width, height, data: PackedByteArray}
+# produced by DTL.
+var _last_matrix: Dictionary = {}
 var _initialized: bool = false
 
 # Surface name -> base of the generated albedo/normal pair. Sampled triplanar
@@ -258,20 +265,25 @@ func _build_config() -> Dictionary:
 	}
 
 # Runs the C++ pipeline (blur -> path/road carve -> textures) and caches the
-# results. Kept named draw_heightmap for the renderer call sites.
-func draw_heightmap(matrix: Array) -> ImageTexture:
+# results. `matrix` is the Dictionary {width, height, data: PackedByteArray}
+# produced by DTL.
+func draw_heightmap(matrix: Dictionary) -> ImageTexture:
 	var builder := TerrainBuilder.new()
 	var result: Dictionary = builder.build(matrix, _build_config())
 	height_texture = result.get("height")
 	path_mask_texture = result.get("mask")
-	height_image = height_texture.get_image() if height_texture != null else null
-	if height_image != null:
-		var cx := height_image.get_width() / 2
-		var cy := height_image.get_height() / 2
-		center_height = height_image.get_pixel(cx, cy).r * amplitude
+	heights_packed = result.get("heights", PackedFloat32Array())
+	# Heights buffer is the same dims as the input matrix.
+	heights_width = int(matrix.get("width", 0))
+	heights_height = int(matrix.get("height", 0))
+	# Avoid get_image()/get_pixel — TerrainBuilder hands back the carved
+	# center height directly. `center_height` from build() is already in world
+	# units, so don't multiply by amplitude here.
+	center_height = float(result.get("center_height", 0.0))
+	height_image = null
 	return height_texture
 
-func draw_terrain(matrix: Array):
+func draw_terrain(matrix: Dictionary):
 	_last_matrix = matrix
 	for child in get_children():
 		child.queue_free()

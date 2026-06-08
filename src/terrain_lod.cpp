@@ -1,16 +1,20 @@
 #include "terrain_lod.hpp"
 
 #include <godot_cpp/classes/mesh_instance3d.hpp>
-#include <godot_cpp/classes/surface_tool.hpp>
+#include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/geometry_instance3d.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
+#include <godot_cpp/variant/packed_byte_array.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
+#include <godot_cpp/variant/packed_vector2_array.hpp>
+#include <godot_cpp/variant/packed_int32_array.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 using namespace godot;
 
@@ -116,94 +120,95 @@ void TerrainLOD::clear_terrain()
   }
 }
 
-Ref<ImageTexture> TerrainLOD::_create_height_texture(const Array &matrix)
+// Fallback path: rebuild the same normalized-height image that DrawMatrix3D /
+// TerrainBuilder would produce. Only used if generate() runs without an
+// already-populated DrawMatrix3D sibling. Skips the path/road carve entirely
+// since the carve lives in TerrainBuilder. Goes through raw PackedByteArray
+// (no Image::set_pixel) so it remains fast at 1000x1000.
+Ref<ImageTexture> TerrainLOD::_create_height_texture(Dictionary matrix)
 {
-  int map_height = matrix.size();
-  if (map_height == 0)
+  if (!matrix.has("width") || !matrix.has("height") || !matrix.has("data"))
     return Ref<ImageTexture>();
-
-  Array first_row = matrix[0];
-  int map_width = first_row.size();
-  if (map_width == 0)
+  int map_w = (int)matrix["width"];
+  int map_h = (int)matrix["height"];
+  if (map_w <= 0 || map_h <= 0)
     return Ref<ImageTexture>();
+  PackedByteArray data = matrix["data"];
+  if (data.size() < (int64_t)map_w * map_h)
+    return Ref<ImageTexture>();
+  const uint8_t *src = data.ptr();
 
+  std::vector<float> raw((size_t)map_w * map_h);
   int highest_value = -999999;
   int lowest_value = 999999;
-
-  std::vector<float> raw(static_cast<size_t>(map_width) * map_height, 0.0f);
-  for (int y = 0; y < map_height; y++)
+  for (int i = 0, n = map_w * map_h; i < n; i++)
   {
-    Array row = matrix[y];
-    for (int x = 0; x < map_width; x++)
-    {
-      int cell = row[x];
-      raw[y * map_width + x] = static_cast<float>(cell);
-      if (cell < lowest_value)
-        lowest_value = cell;
-      if (cell > highest_value)
-        highest_value = cell;
-    }
+    int cell = (int)src[i];
+    raw[i] = (float)cell;
+    if (cell < lowest_value) lowest_value = cell;
+    if (cell > highest_value) highest_value = cell;
   }
 
-  float range = static_cast<float>(highest_value - lowest_value);
+  float range = (float)(highest_value - lowest_value);
   if (range == 0.0f)
     range = 1.0f;
-  float lowest_f = static_cast<float>(lowest_value);
+  float lowest_f = (float)lowest_value;
 
-  // Two 3x3 box blur passes (≈ 5x5 Gaussian) smooth DTL's integer step
-  // quantization — a single pass isn't enough to hide sub-texel Perlin noise.
-  std::vector<float> smoothed(static_cast<size_t>(map_width) * map_height, 0.0f);
-  std::vector<float> *src = &raw;
-  std::vector<float> *dst = &smoothed;
+  // Separable 3x3 box blur, two passes. Cache-friendly and only ~6 reads per
+  // pixel per pass vs 9 for the naive 2D kernel.
+  std::vector<float> tmp(raw.size());
   for (int pass = 0; pass < 2; pass++)
   {
-    for (int y = 0; y < map_height; y++)
+    for (int y = 0; y < map_h; y++)
     {
-      for (int x = 0; x < map_width; x++)
+      int row = y * map_w;
+      for (int x = 0; x < map_w; x++)
       {
-        float sum = 0.0f;
-        int count = 0;
-        for (int dy = -1; dy <= 1; dy++)
-        {
-          int ny = y + dy;
-          if (ny < 0 || ny >= map_height)
-            continue;
-          for (int dx = -1; dx <= 1; dx++)
-          {
-            int nx = x + dx;
-            if (nx < 0 || nx >= map_width)
-              continue;
-            sum += (*src)[ny * map_width + nx];
-            count++;
-          }
-        }
-        (*dst)[y * map_width + x] = sum / static_cast<float>(count);
+        float sum = raw[row + x];
+        int cnt = 1;
+        if (x > 0)         { sum += raw[row + x - 1]; cnt++; }
+        if (x + 1 < map_w) { sum += raw[row + x + 1]; cnt++; }
+        tmp[row + x] = sum / (float)cnt;
       }
     }
-    std::swap(src, dst);
-  }
-  // After swap, `src` holds the final blurred data.
-
-  Ref<Image> image = Image::create_empty(map_width, map_height, false, Image::FORMAT_RF);
-
-  for (int y = 0; y < map_height; y++)
-  {
-    for (int x = 0; x < map_width; x++)
+    for (int y = 0; y < map_h; y++)
     {
-      float normalized = ((*src)[y * map_width + x] - lowest_f) / range;
-      image->set_pixel(x, y, Color(normalized, 0.0f, 0.0f));
+      int row = y * map_w;
+      for (int x = 0; x < map_w; x++)
+      {
+        float sum = tmp[row + x];
+        int cnt = 1;
+        if (y > 0)         { sum += tmp[row - map_w + x]; cnt++; }
+        if (y + 1 < map_h) { sum += tmp[row + map_w + x]; cnt++; }
+        raw[row + x] = sum / (float)cnt;
+      }
     }
   }
 
+  // Normalize to 0..1 and pack as raw RF bytes — Image::create_from_data
+  // copies the buffer directly with no per-pixel marshalling.
+  PackedByteArray height_bytes;
+  height_bytes.resize((int64_t)map_w * map_h * (int64_t)sizeof(float));
+  float *dst = reinterpret_cast<float *>(height_bytes.ptrw());
+  float inv_range = 1.0f / range;
+  heights_norm.resize(map_w * map_h);
+  float *hp = heights_norm.ptrw();
+  for (int i = 0, n = map_w * map_h; i < n; i++)
+  {
+    float v = (raw[i] - lowest_f) * inv_range;
+    dst[i] = v;
+    hp[i] = v;
+  }
+  heights_w = map_w;
+  heights_h = map_h;
+
+  Ref<Image> image = Image::create_from_data(map_w, map_h, false, Image::FORMAT_RF, height_bytes);
   image->generate_mipmaps();
   return ImageTexture::create_from_image(image);
 }
 
-void TerrainLOD::generate(Array matrix)
+void TerrainLOD::generate(Dictionary matrix)
 {
-  if (matrix.size() == 0)
-    return;
-
   if (draw_matrix_3d_path.is_empty())
   {
     UtilityFunctions::printerr("TerrainLOD: draw_matrix_3d path is not set.");
@@ -226,15 +231,36 @@ void TerrainLOD::generate(Array matrix)
   if (dm_tex.is_valid())
   {
     height_texture = dm_tex;
-    Ref<Image> dm_img = dm_node->get("height_image");
-    height_image = dm_img.is_valid() ? dm_img : height_texture->get_image();
+    // Heights come over as a flat PackedFloat32Array (no Image::get_pixel).
+    Variant dm_heights = dm_node->get("heights_packed");
+    if (dm_heights.get_type() == Variant::PACKED_FLOAT32_ARRAY)
+      heights_norm = dm_heights;
+    else
+      heights_norm = PackedFloat32Array();
+    heights_w = (int)dm_node->get("heights_width");
+    heights_h = (int)dm_node->get("heights_height");
+    if (heights_w <= 0 || heights_h <= 0 || heights_norm.size() < heights_w * heights_h)
+    {
+      // Fallback: derive from the image once (slow per-pixel read), but cache.
+      Ref<Image> img = dm_tex->get_image();
+      if (img.is_valid())
+      {
+        heights_w = img->get_width();
+        heights_h = img->get_height();
+        PackedByteArray bytes = img->get_data();
+        if (bytes.size() >= (int64_t)heights_w * heights_h * (int64_t)sizeof(float))
+        {
+          heights_norm.resize(heights_w * heights_h);
+          std::memcpy(heights_norm.ptrw(), bytes.ptr(), heights_w * heights_h * sizeof(float));
+        }
+      }
+    }
   }
   else
   {
     height_texture = _create_height_texture(matrix);
     if (height_texture.is_null())
       return;
-    height_image = height_texture->get_image();
   }
 
   _rebuild_chunks();
@@ -244,13 +270,13 @@ Ref<ShaderMaterial> TerrainLOD::_get_lod_material(const Ref<ShaderMaterial> &bas
 {
   if (lod == 0)
     return base;
-  while (static_cast<int>(lod_materials.size()) < lod)
+  while ((int)lod_materials.size() < lod)
   {
-    int next_lod = static_cast<int>(lod_materials.size()) + 1;
+    int next_lod = (int)lod_materials.size() + 1;
     Ref<ShaderMaterial> clone = Ref<ShaderMaterial>(Object::cast_to<ShaderMaterial>(base->duplicate().ptr()));
     if (clone.is_null())
       return base;
-    clone->set_shader_parameter("height_lod", static_cast<float>(next_lod));
+    clone->set_shader_parameter("height_lod", (float)next_lod);
     lod_materials.push_back(clone);
   }
   return lod_materials[lod - 1];
@@ -282,27 +308,26 @@ void TerrainLOD::_rebuild_chunks()
     terrain_size = 500.0f;
 
   material->set_shader_parameter("height_texture", height_texture);
-  int tex_w = height_image.is_valid() ? height_image->get_width() : 1;
-  int tex_h = height_image.is_valid() ? height_image->get_height() : 1;
+  int tex_w = heights_w > 0 ? heights_w : (int)height_texture->get_width();
+  int tex_h = heights_h > 0 ? heights_h : (int)height_texture->get_height();
   if (tex_w > 0 && tex_h > 0)
   {
-    material->set_shader_parameter("texel_size", Vector2(1.0f / static_cast<float>(tex_w), 1.0f / static_cast<float>(tex_h)));
+    material->set_shader_parameter("texel_size", Vector2(1.0f / (float)tex_w, 1.0f / (float)tex_h));
   }
 
-  float chunk_world_size = terrain_size / static_cast<float>(chunk_count);
+  float chunk_world_size = terrain_size / (float)chunk_count;
   float base_dist = chunk_world_size * 2.0f * lod_distance_multiplier;
   float half_terrain = terrain_size * 0.5f;
 
-  chunks.reserve(static_cast<size_t>(chunk_count) * chunk_count);
+  chunks.reserve((size_t)chunk_count * chunk_count);
 
   for (int cz = 0; cz < chunk_count; cz++)
   {
     for (int cx = 0; cx < chunk_count; cx++)
     {
-      // Chunk parent node positioned at center of this chunk
       Node3D *chunk_parent = memnew(Node3D);
-      float pos_x = (static_cast<float>(cx) + 0.5f) * chunk_world_size - half_terrain;
-      float pos_z = (static_cast<float>(cz) + 0.5f) * chunk_world_size - half_terrain;
+      float pos_x = ((float)cx + 0.5f) * chunk_world_size - half_terrain;
+      float pos_z = ((float)cz + 0.5f) * chunk_world_size - half_terrain;
       chunk_parent->set_position(Vector3(pos_x, 0.0f, pos_z));
       add_child(chunk_parent);
 
@@ -314,7 +339,6 @@ void TerrainLOD::_rebuild_chunks()
 
       for (int lod = 0; lod < lod_levels; lod++)
       {
-        // Calculate subdivisions for this LOD level (halving each time, min 2)
         int subs = lod0_subdivisions >> lod;
         if (subs < 2)
           subs = 2;
@@ -327,9 +351,6 @@ void TerrainLOD::_rebuild_chunks()
         mesh_instance->set_mesh(mesh);
         mesh_instance->set_material_override(_get_lod_material(material, lod));
 
-        // Adjacent LOD ranges meet at (2*lod+1)*base_dist with hard cutoffs —
-        // FADE_SELF dither left the whole terrain visibly fading as the camera
-        // flew out, because every chunk crossed a transition zone together.
         float range_begin = 0.0f;
         float range_end = 0.0f;
         bool is_first = (lod == 0);
@@ -342,13 +363,13 @@ void TerrainLOD::_rebuild_chunks()
         }
         else if (is_last)
         {
-          range_begin = base_dist * static_cast<float>(2 * lod - 1);
-          range_end = 0.0f; // 0 means infinite
+          range_begin = base_dist * (float)(2 * lod - 1);
+          range_end = 0.0f;
         }
         else
         {
-          range_begin = base_dist * static_cast<float>(2 * lod - 1);
-          range_end = base_dist * static_cast<float>(2 * lod + 1);
+          range_begin = base_dist * (float)(2 * lod - 1);
+          range_end = base_dist * (float)(2 * lod + 1);
         }
 
         mesh_instance->set_visibility_range_begin(range_begin);
@@ -361,71 +382,92 @@ void TerrainLOD::_rebuild_chunks()
   }
 }
 
+// Direct ArrayMesh build — SurfaceTool's add_vertex / set_uv / set_normal go
+// through Variant-bound calls per vertex, so a 128x128 chunk pays ~50k method
+// dispatches. Filling PackedVector3Array / PackedVector2Array / PackedInt32Array
+// directly is the same data with one bound call total. Skip tangents — the
+// shader sets NORMAL itself and Godot can derive TBN screen-space for the
+// detail NORMAL_MAP sample.
 Ref<ArrayMesh> TerrainLOD::_build_chunk_mesh(int chunk_x, int chunk_z, int subdivisions, float amplitude)
 {
-  Ref<SurfaceTool> st;
-  st.instantiate();
-
-  st->begin(Mesh::PRIMITIVE_TRIANGLES);
-
-  float chunk_world_size = terrain_size / static_cast<float>(chunk_count);
-
-  // UV sub-region for this chunk within the full heightmap
-  float u_start = static_cast<float>(chunk_x) / static_cast<float>(chunk_count);
-  float v_start = static_cast<float>(chunk_z) / static_cast<float>(chunk_count);
-  float uv_range = 1.0f / static_cast<float>(chunk_count);
+  float chunk_world_size = terrain_size / (float)chunk_count;
+  float u_start = (float)chunk_x / (float)chunk_count;
+  float v_start = (float)chunk_z / (float)chunk_count;
+  float uv_range = 1.0f / (float)chunk_count;
 
   float half_chunk = chunk_world_size * 0.5f;
   int verts_per_side = subdivisions + 1;
-  float step = chunk_world_size / static_cast<float>(subdivisions);
+  float step = chunk_world_size / (float)subdivisions;
 
-  // Generate vertices
+  int vert_count = verts_per_side * verts_per_side;
+  int tri_index_count = subdivisions * subdivisions * 6;
+
+  PackedVector3Array verts;
+  PackedVector3Array normals;
+  PackedVector2Array uvs;
+  PackedInt32Array indices;
+  verts.resize(vert_count);
+  normals.resize(vert_count);
+  uvs.resize(vert_count);
+  indices.resize(tri_index_count);
+
+  Vector3 *vp = verts.ptrw();
+  Vector3 *np = normals.ptrw();
+  Vector2 *up = uvs.ptrw();
+  int32_t *ip = indices.ptrw();
+
+  // Vertices: flat plane (height comes from vertex shader sampling the
+  // heightmap). Normal is a placeholder; the vertex shader overwrites it
+  // with the heightmap-derived normal.
+  Vector3 default_normal(0.0f, 1.0f, 0.0f);
   for (int z = 0; z < verts_per_side; z++)
   {
+    float local_z = -half_chunk + (float)z * step;
+    float v = v_start + ((float)z / (float)subdivisions) * uv_range;
+    int row = z * verts_per_side;
     for (int x = 0; x < verts_per_side; x++)
     {
-      float local_x = -half_chunk + static_cast<float>(x) * step;
-      float local_z = -half_chunk + static_cast<float>(z) * step;
-
-      float u = u_start + (static_cast<float>(x) / static_cast<float>(subdivisions)) * uv_range;
-      float v = v_start + (static_cast<float>(z) / static_cast<float>(subdivisions)) * uv_range;
-
-      st->set_uv(Vector2(u, v));
-      st->set_normal(Vector3(0.0f, 1.0f, 0.0f));
-      st->add_vertex(Vector3(local_x, 0.0f, local_z));
+      float local_x = -half_chunk + (float)x * step;
+      float u = u_start + ((float)x / (float)subdivisions) * uv_range;
+      vp[row + x] = Vector3(local_x, 0.0f, local_z);
+      np[row + x] = default_normal;
+      up[row + x] = Vector2(u, v);
     }
   }
 
-  // Generate triangle indices
   for (int z = 0; z < subdivisions; z++)
   {
     for (int x = 0; x < subdivisions; x++)
     {
-      int top_left = z * verts_per_side + x;
-      int top_right = top_left + 1;
-      int bottom_left = (z + 1) * verts_per_side + x;
-      int bottom_right = bottom_left + 1;
-
-      // First triangle (clockwise from above)
-      st->add_index(top_left);
-      st->add_index(top_right);
-      st->add_index(bottom_left);
-
-      // Second triangle
-      st->add_index(top_right);
-      st->add_index(bottom_right);
-      st->add_index(bottom_left);
+      int tl = z * verts_per_side + x;
+      int tr = tl + 1;
+      int bl = (z + 1) * verts_per_side + x;
+      int br = bl + 1;
+      int o = (z * subdivisions + x) * 6;
+      ip[o + 0] = tl;
+      ip[o + 1] = tr;
+      ip[o + 2] = bl;
+      ip[o + 3] = tr;
+      ip[o + 4] = br;
+      ip[o + 5] = bl;
     }
   }
 
-  st->generate_normals();
-  st->generate_tangents();
-  Ref<ArrayMesh> mesh = st->commit();
+  Array arrays;
+  arrays.resize(Mesh::ARRAY_MAX);
+  arrays[Mesh::ARRAY_VERTEX] = verts;
+  arrays[Mesh::ARRAY_NORMAL] = normals;
+  arrays[Mesh::ARRAY_TEX_UV] = uvs;
+  arrays[Mesh::ARRAY_INDEX] = indices;
 
-  // Set custom AABB to account for vertex shader height displacement.
-  float half_chunk_size = chunk_world_size * 0.5f;
+  Ref<ArrayMesh> mesh;
+  mesh.instantiate();
+  mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
+
+  // Custom AABB so frustum culling accounts for vertex-shader displacement.
+  float hh = chunk_world_size * 0.5f;
   AABB custom_aabb(
-      Vector3(-half_chunk_size, 0.0f, -half_chunk_size),
+      Vector3(-hh, 0.0f, -hh),
       Vector3(chunk_world_size, amplitude, chunk_world_size));
   mesh->set_custom_aabb(custom_aabb);
 
@@ -443,7 +485,7 @@ void TerrainLOD::_process(double delta)
   if (player_path.is_empty())
     return;
 
-  collision_timer += static_cast<float>(delta);
+  collision_timer += (float)delta;
   if (collision_timer < collision_update_interval)
     return;
   collision_timer = 0.0f;
@@ -460,12 +502,11 @@ void TerrainLOD::_update_colliders()
   if (player3d == nullptr)
     return;
 
-  // Compare in TerrainLOD-local space (chunk parents are positioned in local space).
   Vector3 player_world = player3d->get_global_position();
   Vector3 player_local = get_global_transform().affine_inverse().xform(player_world);
 
   float activate_r = collision_radius;
-  float deactivate_r = collision_radius * 1.2f; // hysteresis margin
+  float deactivate_r = collision_radius * 1.2f;
   float act_sq = activate_r * activate_r;
   float deact_sq = deactivate_r * deactivate_r;
 
@@ -487,7 +528,7 @@ void TerrainLOD::_update_colliders()
 
 float TerrainLOD::_chunk_distance_sq_xz(const ChunkData &chunk, const Vector3 &p) const
 {
-  float chunk_world_size = terrain_size / static_cast<float>(chunk_count);
+  float chunk_world_size = terrain_size / (float)chunk_count;
   float h = chunk_world_size * 0.5f;
   Vector3 cp = chunk.parent->get_position();
   float closest_x = std::clamp(p.x, cp.x - h, cp.x + h);
@@ -497,29 +538,24 @@ float TerrainLOD::_chunk_distance_sq_xz(const ChunkData &chunk, const Vector3 &p
   return dx * dx + dz * dz;
 }
 
-float TerrainLOD::_sample_height_bilinear(float u, float v) const
+float TerrainLOD::_sample_height_norm(float u, float v) const
 {
-  if (height_image.is_null())
+  if (heights_w <= 0 || heights_h <= 0 || heights_norm.is_empty())
     return 0.0f;
+  const float *hp = heights_norm.ptr();
+  float fx = std::clamp(u, 0.0f, 1.0f) * (float)(heights_w - 1);
+  float fz = std::clamp(v, 0.0f, 1.0f) * (float)(heights_h - 1);
+  int x0 = (int)std::floor(fx);
+  int z0 = (int)std::floor(fz);
+  int x1 = std::min(x0 + 1, heights_w - 1);
+  int z1 = std::min(z0 + 1, heights_h - 1);
+  float tx = fx - (float)x0;
+  float tz = fz - (float)z0;
 
-  int w = height_image->get_width();
-  int h = height_image->get_height();
-  if (w <= 0 || h <= 0)
-    return 0.0f;
-
-  float fx = std::clamp(u, 0.0f, 1.0f) * static_cast<float>(w - 1);
-  float fz = std::clamp(v, 0.0f, 1.0f) * static_cast<float>(h - 1);
-  int x0 = static_cast<int>(std::floor(fx));
-  int z0 = static_cast<int>(std::floor(fz));
-  int x1 = std::min(x0 + 1, w - 1);
-  int z1 = std::min(z0 + 1, h - 1);
-  float tx = fx - static_cast<float>(x0);
-  float tz = fz - static_cast<float>(z0);
-
-  float h00 = height_image->get_pixel(x0, z0).r;
-  float h10 = height_image->get_pixel(x1, z0).r;
-  float h01 = height_image->get_pixel(x0, z1).r;
-  float h11 = height_image->get_pixel(x1, z1).r;
+  float h00 = hp[z0 * heights_w + x0];
+  float h10 = hp[z0 * heights_w + x1];
+  float h01 = hp[z1 * heights_w + x0];
+  float h11 = hp[z1 * heights_w + x1];
 
   float h0 = h00 * (1.0f - tx) + h10 * tx;
   float h1 = h01 * (1.0f - tx) + h11 * tx;
@@ -530,38 +566,39 @@ void TerrainLOD::_build_chunk_collision(ChunkData &chunk)
 {
   if (chunk.collider_active)
     return;
-  if (height_image.is_null())
+  if (heights_norm.is_empty() || heights_w <= 0 || heights_h <= 0)
     return;
 
   int subs = std::max(2, collision_subdivisions);
   int verts_per_side = subs + 1;
-  float chunk_world_size = terrain_size / static_cast<float>(chunk_count);
+  float chunk_world_size = terrain_size / (float)chunk_count;
   float half_chunk = chunk_world_size * 0.5f;
-  float step = chunk_world_size / static_cast<float>(subs);
+  float step = chunk_world_size / (float)subs;
 
-  float u_start = static_cast<float>(chunk.cx) / static_cast<float>(chunk_count);
-  float v_start = static_cast<float>(chunk.cz) / static_cast<float>(chunk_count);
-  float uv_range = 1.0f / static_cast<float>(chunk_count);
+  float u_start = (float)chunk.cx / (float)chunk_count;
+  float v_start = (float)chunk.cz / (float)chunk_count;
+  float uv_range = 1.0f / (float)chunk_count;
 
-  // Sample displaced vertex positions (matches shader's texture(height_texture, UV).r * amplitude)
+  // Sample displaced vertex positions from the flat float buffer; matches
+  // shader's texture(height_texture, UV).r * amplitude with bilinear filter.
   std::vector<Vector3> verts;
-  verts.reserve(static_cast<size_t>(verts_per_side) * verts_per_side);
+  verts.reserve((size_t)verts_per_side * verts_per_side);
   for (int z = 0; z < verts_per_side; z++)
   {
     for (int x = 0; x < verts_per_side; x++)
     {
-      float local_x = -half_chunk + static_cast<float>(x) * step;
-      float local_z = -half_chunk + static_cast<float>(z) * step;
-      float u = u_start + (static_cast<float>(x) / static_cast<float>(subs)) * uv_range;
-      float v = v_start + (static_cast<float>(z) / static_cast<float>(subs)) * uv_range;
-      float height = _sample_height_bilinear(u, v) * current_amplitude;
+      float local_x = -half_chunk + (float)x * step;
+      float local_z = -half_chunk + (float)z * step;
+      float u = u_start + ((float)x / (float)subs) * uv_range;
+      float v = v_start + ((float)z / (float)subs) * uv_range;
+      float height = _sample_height_norm(u, v) * current_amplitude;
       verts.push_back(Vector3(local_x, height, local_z));
     }
   }
 
-  // Build flat face array for ConcavePolygonShape3D (3 verts per triangle)
   PackedVector3Array faces;
   faces.resize(subs * subs * 6);
+  Vector3 *fp = faces.ptrw();
   int idx = 0;
   for (int z = 0; z < subs; z++)
   {
@@ -571,13 +608,12 @@ void TerrainLOD::_build_chunk_collision(ChunkData &chunk)
       int tr = tl + 1;
       int bl = (z + 1) * verts_per_side + x;
       int br = bl + 1;
-
-      faces.set(idx++, verts[tl]);
-      faces.set(idx++, verts[tr]);
-      faces.set(idx++, verts[bl]);
-      faces.set(idx++, verts[tr]);
-      faces.set(idx++, verts[br]);
-      faces.set(idx++, verts[bl]);
+      fp[idx++] = verts[tl];
+      fp[idx++] = verts[tr];
+      fp[idx++] = verts[bl];
+      fp[idx++] = verts[tr];
+      fp[idx++] = verts[br];
+      fp[idx++] = verts[bl];
     }
   }
 
